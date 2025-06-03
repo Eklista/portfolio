@@ -1,7 +1,10 @@
 import React from 'react';
-import { Mail, MessageCircle, Sparkles, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, MessageCircle, Sparkles, Clock, CheckCircle, ArrowRight, Calculator } from 'lucide-react';
+import { useChatContext } from '../../context/ChatContext';
 
 const Contact = () => {
+  const { openChat, openQuote } = useChatContext();
+
   return (
     <section id="contacto" className="py-20 bg-secondary">
       <div className="max-w-5xl mx-auto px-6">
@@ -28,32 +31,51 @@ const Contact = () => {
             y llevar tu proyecto al siguiente nivel.
           </p>
 
-          {/* Main CTA */}
-          <div className="mb-12">
-            <a 
-              href="mailto:eklista@eklista.com"
+          {/* Main CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            {/* Cotizador CTA - Principal */}
+            <button 
+              onClick={openQuote}
               className="btn-accent px-10 py-5 rounded-full font-poppins font-semibold text-xl inline-flex items-center gap-3 group"
             >
-              <Mail className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
-              eklista@eklista.com
+              <Calculator className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+              Cotizar proyecto
+            </button>
+
+            {/* Chat CTA - Secundario */}
+            <button 
+              onClick={openChat}
+              className="px-10 py-5 rounded-full font-poppins font-semibold text-xl inline-flex items-center gap-3 border-2 border-secondary text-secondary hover-border-accent hover-text-accent transition-all duration-300 hover:scale-105"
+            >
+              <MessageCircle className="w-6 h-6" />
+              Chat rápido
+            </button>
+
+            {/* Email CTA - Terciario */}
+            <a 
+              href="mailto:eklista@eklista.com"
+              className="px-8 py-4 rounded-full font-inter font-medium text-lg inline-flex items-center gap-3 border border-primary text-muted hover-border-secondary hover-text-secondary transition-all duration-300"
+            >
+              <Mail className="w-5 h-5" />
+              Email directo
             </a>
           </div>
 
           {/* Secondary info */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center text-muted">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-accent" />
-              <span className="font-inter text-sm">Respuesta en 24h</span>
+              <Calculator className="w-4 h-4 text-accent" />
+              <span className="font-inter text-sm">Cotizador: Precio inmediato</span>
             </div>
             <div className="hidden sm:block w-1 h-1 bg-border-secondary rounded-full"></div>
             <div className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-accent" />
-              <span className="font-inter text-sm">Consulta gratuita</span>
+              <span className="font-inter text-sm">Chat: Dudas rápidas</span>
             </div>
             <div className="hidden sm:block w-1 h-1 bg-border-secondary rounded-full"></div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-accent" />
-              <span className="font-inter text-sm">Sin compromiso</span>
+              <Mail className="w-4 h-4 text-accent" />
+              <span className="font-inter text-sm">Email: Respuesta en 24h</span>
             </div>
           </div>
         </div>
@@ -64,23 +86,23 @@ const Contact = () => {
           {/* Quick Project */}
           <div className="bg-surface rounded-2xl p-8 border border-primary card-hover">
             <div className="w-12 h-12 bg-accent-surface rounded-xl flex items-center justify-center mb-6">
-              <Sparkles className="w-6 h-6 text-accent" />
+              <Calculator className="w-6 h-6 text-accent" />
             </div>
             
             <h3 className="font-poppins text-xl font-semibold text-primary mb-4">
-              Proyecto Rápido
+              Cotizador Automático
             </h3>
             
             <p className="font-inter text-muted mb-6 leading-relaxed">
-              ¿Necesitas algo específico y directo? Perfecto para ajustes, fixes o 
-              implementaciones puntuales.
+              Obtén un presupuesto detallado al instante. Selecciona tu tipo de proyecto
+              y características para ver el precio en tiempo real.
             </p>
             
             <ul className="space-y-2 mb-6">
               {[
-                'Respuesta inmediata',
-                'Presupuesto en 24h',
-                'Desarrollo ágil'
+                'Precio inmediato',
+                'Selección de características',
+                'Cotización detallada por email'
               ].map((item, index) => (
                 <li key={index} className="flex items-center gap-2 text-sm text-secondary">
                   <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
@@ -89,13 +111,13 @@ const Contact = () => {
               ))}
             </ul>
             
-            <a
-              href="mailto:eklista@eklista.com?subject=Proyecto Rápido - Consulta"
+            <button
+              onClick={openQuote}
               className="inline-flex items-center gap-2 text-accent hover:text-accent-light font-inter font-semibold transition-colors"
             >
-              Enviar consulta rápida
+              Abrir cotizador
               <ArrowRight className="w-4 h-4" />
-            </a>
+            </button>
           </div>
 
           {/* Custom Project */}
@@ -105,19 +127,19 @@ const Contact = () => {
             </div>
             
             <h3 className="font-poppins text-xl font-semibold text-primary mb-4">
-              Proyecto Personalizado
+              Chat de Consultas
             </h3>
             
             <p className="font-inter text-muted mb-6 leading-relaxed">
-              ¿Tienes una idea más compleja? Hablemos en detalle sobre tu visión 
-              y cómo hacerla realidad.
+              ¿Tienes dudas específicas? Nuestro chat te ayuda con preguntas rápidas
+              sobre servicios, tiempos o cualquier consulta.
             </p>
             
             <ul className="space-y-2 mb-6">
               {[
-                'Consulta estratégica',
-                'Propuesta detallada',
-                'Seguimiento personalizado'
+                'Respuesta inmediata',
+                'Consultas sin compromiso',
+                'Disponible 24/7'
               ].map((item, index) => (
                 <li key={index} className="flex items-center gap-2 text-sm text-secondary">
                   <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
@@ -126,14 +148,51 @@ const Contact = () => {
               ))}
             </ul>
             
-            <a
-              href="mailto:eklista@eklista.com?subject=Proyecto Personalizado - Conversemos"
+            <button
+              onClick={openChat}
               className="inline-flex items-center gap-2 text-accent hover:text-accent-light font-inter font-semibold transition-colors"
             >
-              Agendar conversación
+              Abrir chat
               <ArrowRight className="w-4 h-4" />
-            </a>
+            </button>
           </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-8 border border-primary card-hover">
+          <div className="w-12 h-12 bg-accent-surface rounded-xl flex items-center justify-center mb-6">
+            <Mail className="w-6 h-6 text-accent" />
+          </div>
+          
+          <h3 className="font-poppins text-xl font-semibold text-primary mb-4">
+            Proyecto Personalizado
+          </h3>
+          
+          <p className="font-inter text-muted mb-6 leading-relaxed">
+            ¿Tienes una idea compleja? Conversemos en detalle por email sobre
+            tu visión y cómo hacerla realidad.
+          </p>
+          
+          <ul className="space-y-2 mb-6">
+            {[
+              'Consulta estratégica',
+              'Propuesta detallada',
+              'Seguimiento personalizado'
+            ].map((item, index) => (
+              <li key={index} className="flex items-center gap-2 text-sm text-secondary">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+                {item}
+              </li>
+            ))}
+          </ul>
+          
+          <a
+            href="mailto:eklista@eklista.com?subject=Proyecto Personalizado - Conversemos"
+            className="inline-flex items-center gap-2 text-accent hover:text-accent-light font-inter font-semibold transition-colors"
+          >
+            Enviar email detallado
+            <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
         </div>
 
         {/* Process Steps */}
@@ -152,7 +211,7 @@ const Contact = () => {
               {
                 step: '01',
                 title: 'Conversación inicial',
-                description: 'Hablamos sobre tu proyecto, objetivos y necesidades específicas.'
+                description: 'Chat rápido o email detallado según la complejidad de tu proyecto.'
               },
               {
                 step: '02',
@@ -187,9 +246,12 @@ const Contact = () => {
 
         {/* FAQ Quick Items */}
         <div className="mt-16 text-center">
-          <h3 className="font-poppins text-xl font-semibold text-primary mb-8">
+          <h3 className="font-poppins text-xl font-semibold text-primary mb-4">
             Preguntas frecuentes
           </h3>
+          <p className="font-inter text-muted text-sm mb-8">
+            Haz clic para preguntar en el chat o enviar por email
+          </p>
           
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             {[
@@ -198,17 +260,16 @@ const Contact = () => {
               'Incluye mantenimiento',
               'Trabajas con equipos remotos'
             ].map((faq, index) => (
-              <a
+              <button
                 key={index}
-                href={`mailto:eklista@eklista.com?subject=Pregunta: ${faq}`}
+                onClick={openChat}
                 className="px-4 py-2 bg-primary border border-secondary text-secondary hover-border-accent hover-text-accent rounded-full font-inter transition-colors"
               >
                 {faq}
-              </a>
+              </button>
             ))}
           </div>
         </div>
-      </div>
     </section>
   );
 };

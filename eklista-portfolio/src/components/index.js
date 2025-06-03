@@ -16,3 +16,7 @@ export { default as Contact } from './sections/Contact';
 export { default as TabMenu } from './ui/TabMenu';
 export { default as ProjectCard } from './ui/ProjectCard';
 export { default as TechCard } from './ui/TechCard';
+export { default as Chatbox } from './ui/Chatbox';
+
+// Pages
+export { default as QuotePage } from './pages/QuotePage';

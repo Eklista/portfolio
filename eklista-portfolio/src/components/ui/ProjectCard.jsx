@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Calendar, User, ArrowRight } from 'lucide-react';
+import { Eye, Calendar, User } from 'lucide-react';
 
 const ProjectCard = ({ project, onClick }) => {
   const handleClick = (e) => {
@@ -29,12 +29,6 @@ const ProjectCard = ({ project, onClick }) => {
           <span className="font-inter text-sm font-medium text-secondary">{project.year}</span>
         </div>
 
-        {/* Hover overlay content */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <div className="bg-surface/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-primary">
-            <span className="font-inter text-sm font-medium text-accent">Ver ficha técnica</span>
-          </div>
-        </div>
       </div>
 
       {/* Project Content */}
@@ -55,7 +49,7 @@ const ProjectCard = ({ project, onClick }) => {
         </div>
 
         {/* Technologies */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2">
           {project.technologies.slice(0, 3).map((tech, index) => (
             <span
               key={index}
@@ -69,15 +63,6 @@ const ProjectCard = ({ project, onClick }) => {
               +{project.technologies.length - 3}
             </span>
           )}
-        </div>
-
-        {/* View Details Button */}
-        <div className="flex items-center justify-between pt-4 border-t border-primary">
-          <span className="font-inter text-secondary font-semibold text-sm hover:text-accent transition-colors group/btn flex items-center gap-2">
-            Ver ficha técnica
-            <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" />
-          </span>
-          <Eye className="w-4 h-4 text-muted group-hover:text-accent transition-colors" />
         </div>
       </div>
 

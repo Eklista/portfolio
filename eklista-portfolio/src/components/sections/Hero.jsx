@@ -1,13 +1,20 @@
 import React from 'react';
-import { Sparkles, ArrowDown, Play } from 'lucide-react';
+import { Sparkles, ArrowDown, Play, MessageCircle, Calculator } from 'lucide-react';
 import { projects } from '../../data/projects';
+import { useChatContext } from '../../context/ChatContext';
 
 const Hero = () => {
+  const { openChat, openQuote } = useChatContext();
+  
   // Obtener todas las imágenes de todos los proyectos
   const allProjects = Object.values(projects).flat();
   
   // Duplicar los proyectos para loop infinito
   const duplicatedProjects = [...allProjects, ...allProjects];
+
+  const handleChatOpen = () => {
+    openChat();
+  };
 
   return (
     <section id="inicio" className="pt-32 pb-8 relative overflow-hidden bg-primary">
@@ -94,15 +101,54 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* CTA final */}
+          {/* CTAs duales */}
           <div className="text-center px-6">
-            <a 
-              href="#portafolio"
-              className="btn-accent px-8 py-4 rounded-full font-inter font-semibold inline-flex items-center gap-3 group"
-            >
-              Explorar trabajo completo
-              <ArrowDown className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
-            </a>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              {/* Botón principal - Cotizador */}
+              <a 
+                href="#cotizador"
+                className="btn-accent px-8 py-4 rounded-full font-inter font-semibold inline-flex items-center gap-3 group"
+              >
+                <Calculator className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                Cotizar mi proyecto
+              </a>
+
+              {/* Botón secundario - Chat rápido */}
+              <button 
+                onClick={handleChatOpen}
+                className="px-8 py-4 rounded-full font-inter font-semibold border-2 border-secondary text-secondary hover-border-accent hover-text-accent transition-all duration-300 hover:scale-105 inline-flex items-center gap-3"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Chat rápido
+              </button>
+
+              {/* Botón terciario - Ver portafolio */}
+              <a 
+                href="#portafolio"
+                className="px-6 py-3 rounded-full font-inter text-sm border border-primary text-muted hover-border-secondary hover-text-secondary transition-all duration-300 inline-flex items-center gap-2"
+              >
+                Ver trabajos
+                <ArrowDown className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Texto de apoyo */}
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center text-muted text-sm">
+              <div className="flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-accent" />
+                <span>Cotización detallada</span>
+              </div>
+              <div className="hidden sm:block w-1 h-1 bg-border-secondary rounded-full"></div>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-accent" />
+                <span>Chat para dudas rápidas</span>
+              </div>
+              <div className="hidden sm:block w-1 h-1 bg-border-secondary rounded-full"></div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <span>Respuesta inmediata</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

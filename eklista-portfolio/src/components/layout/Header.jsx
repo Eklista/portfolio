@@ -18,6 +18,7 @@ const Header = () => {
     { name: 'Inicio', href: '#inicio' },
     { name: 'Servicios', href: '#servicios' },
     { name: 'Portafolio', href: '#portafolio' },
+    { name: 'Cotizador', href: '#cotizador' },
     { name: 'Contacto', href: '#contacto' }
   ];
 
@@ -30,14 +31,17 @@ const Header = () => {
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <div className="flex items-center group cursor-pointer">
+          <a 
+            href="#inicio"
+            className="flex items-center group cursor-pointer"
+          >
             <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center mr-3 transition-all duration-300 group-hover:scale-110 group-hover:shadow-accent">
               <span className="text-primary font-bold text-lg">E</span>
             </div>
             <span className="text-2xl font-poppins font-semibold text-primary hover-text-accent transition-colors">
               Eklista
             </span>
-          </div>
+          </a>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
@@ -56,10 +60,10 @@ const Header = () => {
           {/* CTA Button - Desktop */}
           <div className="hidden md:block">
             <a
-              href="#contacto"
+              href="#cotizador"
               className="btn-accent px-6 py-2 rounded-full font-inter font-semibold text-sm"
             >
-              Trabajemos juntos
+              Cotizar proyecto
             </a>
           </div>
 
@@ -93,11 +97,11 @@ const Header = () => {
               {/* Mobile CTA */}
               <div className="pt-2">
                 <a
-                  href="#contacto"
+                  href="#cotizador"
                   onClick={() => setIsMenuOpen(false)}
                   className="btn-accent w-full text-center py-3 rounded-lg font-inter font-semibold text-sm block"
                 >
-                  Trabajemos juntos
+                  Cotizar proyecto
                 </a>
               </div>
             </nav>

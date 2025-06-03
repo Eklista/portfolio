@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User, Clock, Monitor, Package, Target, ExternalLink, ChevronDown } from 'lucide-react';
+import { X, Calendar, User, Clock, Monitor, Package, Target, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const TechCard = ({ project, onClose }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showSpecs, setShowSpecs] = useState(false);
 
   useEffect(() => {
     const handleScroll = (e) => {
       const scrollTop = e.target.scrollTop;
-      setIsScrolled(scrollTop > 100);
+      setIsScrolled(scrollTop > 200);
     };
 
     const modal = document.querySelector('.tech-card-content');
@@ -18,195 +18,260 @@ const TechCard = ({ project, onClose }) => {
     }
   }, []);
 
-  // Si no hay project, no renderizar nada
+  // Prevenir scroll del body cuando el modal está abierto
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   if (!project) return null;
 
-  // Asegurar que technologies existe y es un array
   const technologies = project.technologies || [];
+  const projectImages = project.images || [project.image, project.image, project.image];
 
-  // Crear múltiples imágenes si solo hay una
-  const projectImages = project.images || [
-    project.image,
-    project.image, // Duplicamos para demo
-    project.image
+  // Specs simplificadas
+  const projectSpecs = [
+    { 
+      icon: Calendar, 
+      label: 'Duración', 
+      value: project.specs?.duration || '3-6 meses' 
+    },
+    { 
+      icon: Monitor, 
+      label: 'Dispositivos', 
+      value: 'Responsive' 
+    },
+    { 
+      icon: Package, 
+      label: 'Entregables', 
+      value: project.specs?.deliverables || 'Sitio completo' 
+    },
+    { 
+      icon: Target, 
+      label: 'Cliente', 
+      value: project.client 
+    }
   ];
 
-  // Specs por defecto si no existen
-  const projectSpecs = project.specs || {
-    duration: "3-6 meses", 
-    devices: "Responsive (móvil, tablet, desktop)",
-    deliverables: "Sitio web completo y documentación",
-    technologies: technologies.join(', ') || "Tecnologías modernas"
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % projectImages.length);
   };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + projectImages.length) % projectImages.length);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Escape') {
+      onClose();
+    } else if (e.key === 'ArrowRight') {
+      nextImage();
+    } else if (e.key === 'ArrowLeft') {
+      prevImage();
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   return (
     <div 
-      className="fixed inset-0 bg-primary/95 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-primary/95 backdrop-blur-sm z-50 flex"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="bg-secondary rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden relative">
+      {/* Sidebar izquierda con info del proyecto */}
+      <div className="w-80 bg-secondary border-r border-primary p-6 overflow-y-auto">
         
-        {/* Sticky Header - minimalista */}
-        <div className={`absolute top-0 left-0 right-0 bg-secondary/95 backdrop-blur-md border-b border-primary transition-all duration-300 z-30 ${
-          isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full'
-        }`}>
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
-              <h3 className="font-poppins text-lg font-semibold text-primary">
-                {project.title}
-              </h3>
-              <span className="text-muted">•</span>
-              <span className="font-inter text-sm text-muted">{project.client}</span>
+        {/* Header del proyecto */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <User className="w-4 h-4" />
+              <span>{project.client}</span>
+              <span>•</span>
+              <span>{project.year}</span>
             </div>
             <button
               type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onClose();
-              }}
+              onClick={onClose}
               className="w-8 h-8 bg-surface hover:bg-primary rounded-full flex items-center justify-center text-muted hover:text-primary transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <h1 className="font-poppins text-2xl font-semibold text-primary mb-3">
+            {project.title}
+          </h1>
+          
+          <p className="font-inter text-secondary leading-relaxed text-sm">
+            {project.description}
+          </p>
+        </div>
+
+        {/* Especificaciones como tarjetitas */}
+        <div className="mb-8">
+          <h3 className="font-poppins font-semibold text-primary mb-4 text-sm">
+            Detalles del proyecto
+          </h3>
+          <div className="space-y-3">
+            {projectSpecs.map((spec, index) => {
+              const IconComponent = spec.icon;
+              return (
+                <div key={index} className="bg-surface rounded-lg p-3 border border-primary">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                      <IconComponent className="w-4 h-4 text-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-inter text-xs text-muted uppercase tracking-wide">
+                        {spec.label}
+                      </p>
+                      <p className="font-inter text-sm text-secondary font-medium truncate">
+                        {spec.value}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Technologies */}
+        <div className="mb-8">
+          <h3 className="font-poppins font-semibold text-primary mb-4 text-sm">
+            Tecnologías utilizadas
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {technologies.map((tech, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-primary border border-secondary text-secondary rounded-full font-inter text-xs font-medium"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Navigation counter */}
+        <div className="bg-surface rounded-lg p-3 border border-primary">
+          <div className="flex items-center justify-between">
+            <span className="font-inter text-xs text-muted">
+              Imagen {currentImageIndex + 1} de {projectImages.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={prevImage}
+                disabled={projectImages.length <= 1}
+                className="w-6 h-6 bg-primary rounded flex items-center justify-center text-muted hover:text-accent transition-colors disabled:opacity-50"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <button
+                onClick={nextImage}
+                disabled={projectImages.length <= 1}
+                className="w-6 h-6 bg-primary rounded flex items-center justify-center text-muted hover:text-accent transition-colors disabled:opacity-50"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Área principal de imágenes - estilo Behance */}
+      <div className="flex-1 relative">
+        
+        {/* Header sticky minimalista */}
+        <div className={`absolute top-0 left-0 right-0 bg-secondary/95 backdrop-blur-md transition-all duration-300 z-20 ${
+          isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full'
+        }`}>
+          <div className="flex items-center justify-between p-4">
+            <h3 className="font-poppins text-lg font-semibold text-primary">
+              {project.title}
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 bg-surface/80 hover:bg-surface backdrop-blur-sm rounded-full flex items-center justify-center text-muted hover:text-primary transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Close button fijo */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose();
-          }}
-          className={`absolute top-6 right-6 w-10 h-10 bg-surface/80 hover:bg-surface backdrop-blur-sm rounded-full flex items-center justify-center text-muted hover:text-primary transition-all duration-300 z-20 ${
-            isScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Scrollable Content */}
-        <div className="tech-card-content max-h-[95vh] overflow-y-auto">
-          
-          {/* Project Header - Compacto */}
-          <div className="relative p-8 pb-4">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h1 className="font-poppins text-3xl font-semibold text-primary mb-2">
-                  {project.title}
-                </h1>
-                <div className="flex items-center gap-4 text-sm text-muted">
-                  <span className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    {project.client}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {project.year}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Technologies Pills */}
-            <div className="flex flex-wrap gap-2">
-              {technologies.slice(0, 6).map((tech, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-primary border border-secondary text-secondary rounded-full font-inter text-xs font-medium"
-                >
-                  {tech}
-                </span>
-              ))}
-              {technologies.length > 6 && (
-                <span className="px-3 py-1 bg-primary border border-secondary text-muted rounded-full font-inter text-xs">
-                  +{technologies.length - 6}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Images Gallery - Foco principal */}
-          <div className="px-4 pb-8">
-            <div className="space-y-4">
-              {projectImages.map((image, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={image}
-                    alt={`${project.title} - Vista ${index + 1}`}
-                    className="w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    style={{ 
-                      height: index === 0 ? '500px' : '400px' // Primera imagen más grande
-                    }}
-                  />
-                  
-                  {/* Overlay sutil en hover */}
-                  <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
-                  
-                  {/* Image counter */}
-                  <div className="absolute bottom-4 right-4 bg-surface/90 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="font-inter text-xs font-medium text-secondary">
-                      {index + 1} de {projectImages.length}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Specs - Colapsable y discreto */}
-          <div className="px-8 pb-8">
+        {/* Navegación de imágenes con flechas */}
+        {projectImages.length > 1 && (
+          <>
             <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowSpecs(!showSpecs);
-              }}
-              className="w-full flex items-center justify-between p-4 bg-surface rounded-xl border border-primary hover:border-secondary transition-colors group"
+              onClick={prevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-surface/90 backdrop-blur-sm rounded-full flex items-center justify-center text-muted hover:text-primary transition-all duration-300 z-10 hover:scale-110"
             >
-              <span className="font-poppins font-semibold text-primary">
-                Especificaciones del proyecto
-              </span>
-              <ChevronDown className={`w-5 h-5 text-muted group-hover:text-secondary transition-all duration-300 ${
-                showSpecs ? 'rotate-180' : ''
-              }`} />
+              <ChevronLeft className="w-6 h-6" />
             </button>
+            <button
+              onClick={nextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-surface/90 backdrop-blur-sm rounded-full flex items-center justify-center text-muted hover:text-primary transition-all duration-300 z-10 hover:scale-110"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
 
-            {showSpecs && (
-              <div className="mt-4 p-6 bg-surface rounded-xl border border-primary">
-                <div className="grid md:grid-cols-2 gap-4">
-                  {Object.entries(projectSpecs).map(([key, value], index) => {
-                    const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-                    
-                    return (
-                      <div key={index} className="flex items-start gap-3 p-3 bg-primary rounded-lg">
-                        <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h5 className="font-poppins font-medium text-secondary text-sm mb-1">
-                            {label}
-                          </h5>
-                          <p className="font-inter text-muted text-sm">
-                            {value}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+        {/* Container de imágenes - scroll vertical */}
+        <div className="tech-card-content h-full overflow-y-auto">
+          
+          {/* Espaciado superior */}
+          <div className="h-8"></div>
+          
+          {/* Galería de imágenes pegadas */}
+          <div className="max-w-4xl mx-auto px-8">
+            {projectImages.map((image, index) => (
+              <div key={index} className="mb-0">
+                <img
+                  src={image}
+                  alt={`${project.title} - Vista ${index + 1}`}
+                  className="w-full h-auto object-cover transition-opacity duration-300"
+                  style={{ 
+                    minHeight: '600px',
+                    maxHeight: '1200px',
+                    objectFit: 'cover'
+                  }}
+                />
               </div>
-            )}
+            ))}
           </div>
 
-          {/* Final spacing */}
-          <div className="h-8"></div>
+          {/* Espaciado inferior */}
+          <div className="h-16"></div>
         </div>
+
+        {/* Indicadores de imagen */}
+        {projectImages.length > 1 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface/90 backdrop-blur-sm px-4 py-2 rounded-full">
+            {projectImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentImageIndex(index)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === currentImageIndex 
+                    ? 'bg-accent w-6' 
+                    : 'bg-muted hover:bg-secondary'
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

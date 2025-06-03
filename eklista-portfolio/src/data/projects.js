@@ -2,16 +2,6 @@
 export const projects = {
   'web-design': [
     {
-      id: 'ecommerce-platform',
-      title: 'E-commerce Platform',
-      client: 'Tech Solutions Inc',
-      year: '2024',
-      category: 'Desarrollo Web',
-      description: 'Plataforma de comercio electrónico moderna y escalable con gestión de inventario, pagos integrados y panel administrativo.',
-      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=600&fit=crop',
-      technologies: ['React', 'Node.js', 'MongoDB', 'Stripe API', 'AWS', 'Docker']
-    },
-    {
       id: 'corporate-website',
       title: 'Sitio Corporativo',
       client: 'Innovate Corp',
