@@ -14,7 +14,7 @@ import {
   Award,
   Heart
 } from 'lucide-react';
-import { Folder, FolderWindow, ChatTerminal, Taskbar } from '../';
+import { Folder, FolderWindow, ChatTerminal, Taskbar } from '..';
 
 const DesktopOS = () => {
   const [openWindows, setOpenWindows] = useState([]);
