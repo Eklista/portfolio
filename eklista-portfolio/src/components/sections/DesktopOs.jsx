@@ -8,7 +8,10 @@ import {
   User, 
   Mail,
   Wifi,
-  Battery
+  Battery,
+  Terminal,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { Folder, FolderWindow, DraggableTerminal } from '../ui';
 
@@ -17,6 +20,7 @@ const DesktopOS = () => {
   const [openWindows, setOpenWindows] = useState([]);
   const [showTerminal, setShowTerminal] = useState(true);
   const [terminalMinimized, setTerminalMinimized] = useState(false);
+  const [mobileTerminalOpen, setMobileTerminalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -161,6 +165,101 @@ const DesktopOS = () => {
     setTerminalMinimized(!terminalMinimized);
   };
 
+  // Componente Terminal para móvil
+  const MobileTerminal = () => {
+    const [lines, setLines] = useState([]);
+    const [showCursor, setShowCursor] = useState(true);
+
+    useEffect(() => {
+      const cursorInterval = setInterval(() => {
+        setShowCursor(prev => !prev);
+      }, 530);
+
+      const sequence = [
+        { text: "Welcome to EKLISTA Portfolio OS", delay: 500 },
+        { text: "", delay: 200 },
+        { text: "Initializing creative workspace...", delay: 800 },
+        { text: "✓ Loading projects", delay: 600 },
+        { text: "✓ Mounting design assets", delay: 400 },
+        { text: "✓ Connecting to inspiration", delay: 500 },
+        { text: "", delay: 300 },
+        { text: "System ready. Double-click folders to explore.", delay: 700 },
+        { text: "", delay: 200 },
+        { text: "$ portfolio --status", delay: 1000 },
+        { text: "Online | Creative Mode Active", delay: 300 },
+        { text: "", delay: 500 },
+        { text: "Ready for collaboration ✨", delay: 400 }
+      ];
+
+      let timeouts = [];
+      let currentDelay = 0;
+
+      sequence.forEach((item) => {
+        currentDelay += item.delay;
+        const timeout = setTimeout(() => {
+          setLines(prev => [...prev, item.text]);
+        }, currentDelay);
+        timeouts.push(timeout);
+      });
+
+      return () => {
+        clearInterval(cursorInterval);
+        timeouts.forEach(clearTimeout);
+      };
+    }, []);
+
+    return (
+      <div className="bg-black/95 backdrop-blur-xl rounded-t-2xl border-t border-white/20 h-full overflow-hidden">
+        {/* Header con handle */}
+        <div className="bg-gray-800/80 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b border-gray-700/50">
+          <div className="flex items-center space-x-3">
+            <Terminal size={16} className="text-gray-400" />
+            <span className="text-gray-300 text-sm font-mono">creative-terminal</span>
+          </div>
+          <button
+            onClick={() => setMobileTerminalOpen(false)}
+            className="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors"
+          >
+            <ChevronDown size={16} />
+            <span className="text-xs">Cerrar</span>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 h-full overflow-hidden flex flex-col">
+          <div className="font-mono text-sm leading-relaxed flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+            {lines.map((line, index) => (
+              <motion.div
+                key={index}
+                className={`mb-1 ${
+                  line.startsWith('✓') 
+                    ? 'text-green-400' 
+                    : line.startsWith('$') 
+                    ? 'text-blue-400' 
+                    : line.includes('Ready') || line.includes('✨')
+                    ? 'text-purple-400'
+                    : line.includes('EKLISTA')
+                    ? 'text-white font-bold'
+                    : 'text-gray-300'
+                }`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                {line || ' '}
+              </motion.div>
+            ))}
+            <div className="flex items-center text-green-400 mt-2">
+              <span>$ </span>
+              <span className={`ml-1 ${showCursor ? 'border-r-2 border-green-400' : ''} pr-1`}>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-screen w-full relative overflow-hidden select-none">
       {/* Custom Wallpaper */}
@@ -220,7 +319,7 @@ const DesktopOS = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="absolute inset-0 pt-44 md:pt-40 pb-20 px-4 md:px-8">
+      <div className="absolute inset-0 pt-44 md:pt-40 pb-20 px-4 md:px-8 lg:pb-20">
         {/* Desktop Layout */}
         <div className="hidden lg:flex h-full">
           {/* Folders Section - Alineados a la izquierda */}
@@ -244,10 +343,10 @@ const DesktopOS = () => {
         </div>
 
         {/* Mobile/Tablet Layout */}
-        <div className="lg:hidden flex flex-col gap-8 h-full">
-          {/* Folders Section - Mobile */}
+        <div className="lg:hidden flex flex-col h-full">
+          {/* Folders Section - Mobile (más grandes y mejor espaciado) */}
           <motion.div 
-            className="grid grid-cols-3 gap-6 px-4"
+            className="grid grid-cols-2 sm:grid-cols-3 gap-10 px-6 flex-1 content-start pb-4"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -258,34 +357,40 @@ const DesktopOS = () => {
                 folder={folder}
                 index={index}
                 onDoubleClick={openWindow}
+                isMobileLarge={true}
               />
             ))}
           </motion.div>
-
-          {/* Terminal Section - Mobile */}
-          <div className="flex-1 px-4 pb-8">
-            <div className="h-80">
-              <DraggableTerminal 
-                initialPosition={{ x: 20, y: 50 }}
-                onClose={closeTerminal}
-                onMinimize={minimizeTerminal}
-                isMinimized={terminalMinimized}
-                zIndex={150}
-              />
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Draggable Terminal - Desktop */}
+      {/* Draggable Terminal - Desktop Only */}
       {showTerminal && (
-        <DraggableTerminal 
-          onClose={closeTerminal}
-          onMinimize={minimizeTerminal}
-          isMinimized={terminalMinimized}
-          zIndex={150}
-        />
+        <div className="hidden lg:block">
+          <DraggableTerminal 
+            onClose={closeTerminal}
+            onMinimize={minimizeTerminal}
+            isMinimized={terminalMinimized}
+            zIndex={150}
+          />
+        </div>
       )}
+
+      {/* Mobile Terminal Drawer */}
+      <AnimatePresence>
+        {mobileTerminalOpen && (
+          <motion.div
+            className="lg:hidden fixed inset-x-0 bottom-0 z-40"
+            style={{ height: '60vh' }}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          >
+            <MobileTerminal />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Windows */}
       <AnimatePresence>
@@ -304,10 +409,10 @@ const DesktopOS = () => {
       {/* Dock */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
         <div className="bg-white/20 backdrop-blur-xl rounded-2xl p-3 border border-white/30 shadow-2xl flex items-center space-x-3">
-          {/* Terminal Icon in Dock */}
+          {/* Terminal Button - Desktop */}
           {!showTerminal && (
             <motion.button
-              className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-lg transition-all"
+              className="hidden lg:flex w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 items-center justify-center shadow-lg transition-all"
               whileHover={{ scale: 1.2, y: -10 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowTerminal(true)}
@@ -315,11 +420,25 @@ const DesktopOS = () => {
               <Terminal size={24} className="text-white" />
             </motion.button>
           )}
+
+          {/* Terminal Button - Mobile */}
+          <motion.button
+            className="lg:hidden w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-lg transition-all"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setMobileTerminalOpen(!mobileTerminalOpen)}
+          >
+            {mobileTerminalOpen ? (
+              <ChevronDown size={24} className="text-white" />
+            ) : (
+              <Terminal size={24} className="text-white" />
+            )}
+          </motion.button>
           
-          {/* Terminal Minimized State */}
+          {/* Terminal Minimized State - Desktop */}
           {showTerminal && terminalMinimized && (
             <motion.button
-              className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-lg transition-all opacity-70"
+              className="hidden lg:flex w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 items-center justify-center shadow-lg transition-all opacity-70"
               whileHover={{ scale: 1.2, y: -10 }}
               whileTap={{ scale: 0.9 }}
               onClick={minimizeTerminal}
@@ -343,13 +462,24 @@ const DesktopOS = () => {
             </motion.button>
           ))}
           
-          {openWindows.length === 0 && showTerminal && !terminalMinimized && (
+          {openWindows.length === 0 && showTerminal && !terminalMinimized && !mobileTerminalOpen && (
             <div className="text-white/60 text-sm px-4 py-2">
               Haz doble clic en las carpetas para abrir
             </div>
           )}
         </div>
       </div>
+
+      {/* Overlay cuando terminal móvil está abierta */}
+      {mobileTerminalOpen && (
+        <motion.div
+          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setMobileTerminalOpen(false)}
+        />
+      )}
     </div>
   );
 };

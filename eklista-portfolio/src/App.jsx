@@ -16,7 +16,8 @@ const AppContent = () => {
   
   // Página principal
   return (
-      <DesktopOS />
+      <DesktopOS />,
+      <Chatbox />
   );
 };
 
