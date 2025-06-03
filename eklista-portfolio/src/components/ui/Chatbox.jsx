@@ -31,6 +31,19 @@ const Chatbox = () => {
     }
   }, [isChatOpen]);
 
+  // Bloquear scroll del body cuando el chat está abierto en móvil
+  useEffect(() => {
+    if (isChatOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isChatOpen]);
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -124,7 +137,7 @@ const Chatbox = () => {
 
   return (
     <>
-      {/* Chat Button */}
+      {/* Chat Button - Solo visible cuando el chat está cerrado */}
       <button
         onClick={openChat}
         className={`fixed bottom-6 right-6 w-14 h-14 bg-accent rounded-full shadow-large flex items-center justify-center text-primary hover:scale-110 transition-all duration-300 z-40 ${
@@ -135,12 +148,24 @@ const Chatbox = () => {
         <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent-secondary rounded-full animate-pulse"></div>
       </button>
 
+      {/* Overlay de fondo para móvil */}
+      {isChatOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={closeChat}
+        />
+      )}
+
       {/* Chat Window */}
       {isChatOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-secondary rounded-2xl shadow-large border border-primary z-50 flex flex-col overflow-hidden">
+        <div className={`
+          fixed z-50 bg-secondary rounded-2xl shadow-large border border-primary flex flex-col overflow-hidden
+          lg:bottom-6 lg:right-6 lg:w-96 lg:h-[600px]
+          bottom-0 right-0 left-0 top-0 lg:top-auto lg:left-auto w-full h-full lg:rounded-2xl rounded-none
+        `}>
           
           {/* Header */}
-          <div className="bg-surface border-b border-primary p-4 flex items-center justify-between">
+          <div className="bg-surface border-b border-primary p-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center">
                 <Bot className="w-5 h-5 text-primary" />
@@ -216,11 +241,11 @@ const Chatbox = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Questions */}
+          {/* Quick Questions - Solo cuando hay pocos mensajes */}
           {messages.length === 1 && (
-            <div className="px-4 pb-2">
+            <div className="px-4 pb-2 flex-shrink-0">
               <p className="text-xs text-muted mb-2">Preguntas frecuentes:</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 {quickQuestions.map((question, index) => (
                   <button
                     key={index}
@@ -238,7 +263,7 @@ const Chatbox = () => {
           )}
 
           {/* Input Area */}
-          <div className="border-t border-primary p-4">
+          <div className="border-t border-primary p-4 flex-shrink-0">
             <div className="flex gap-2">
               <textarea
                 ref={inputRef}
@@ -253,7 +278,7 @@ const Chatbox = () => {
               <button
                 onClick={sendMessage}
                 disabled={!inputMessage.trim() || isLoading}
-                className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center text-primary hover:bg-accent-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center text-primary hover:bg-accent-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>

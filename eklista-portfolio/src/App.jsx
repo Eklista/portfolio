@@ -1,5 +1,5 @@
 import React from 'react';
-import { DesktopOS, Chatbox, QuotePage,} from './components';
+import { DesktopOS, QuotePage,} from './components';
 import { ChatProvider } from './context/ChatContext';
 import { useChatContext } from './context/ChatContext';
 
@@ -16,8 +16,7 @@ const AppContent = () => {
   
   // Página principal
   return (
-      <DesktopOS />,
-      <Chatbox />
+      <DesktopOS />
   );
 };
 

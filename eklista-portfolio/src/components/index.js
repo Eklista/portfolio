@@ -5,7 +5,6 @@ export { default as DesktopOS } from './sections/DesktopOs';
 
 // UI Components
 export { default as TechCard } from './ui/TechCard';
-export { default as Chatbox } from './ui/Chatbox';
 export { default as Folder } from './ui/Folder';
 export { default as FolderWindow } from './ui/FolderWindow';
 export { default as DraggableTerminal } from './ui/Terminal';
