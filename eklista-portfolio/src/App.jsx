@@ -1,5 +1,5 @@
 import React from 'react';
-import { DesktopOS, QuotePage,} from './components';
+import { DesktopOS, QuotePage } from './components';
 import { ChatProvider } from './context/ChatContext';
 import { useChatContext } from './context/ChatContext';
 
@@ -9,21 +9,19 @@ const AppContent = () => {
   
   // Si estamos en la página de cotizador, mostrar solo esa página
   if (currentPage === 'quote') {
-    return (
-        <QuotePage />
-    );
+    return <QuotePage />;
   }
   
-  // Página principal
-  return (
-      <DesktopOS />
-  );
+  // Página principal con el nuevo DesktopOS
+  return <DesktopOS />;
 };
 
 function App() {
   return (
     <ChatProvider>
-      <AppContent />
+      <div className="app">
+        <AppContent />
+      </div>
     </ChatProvider>
   );
 }

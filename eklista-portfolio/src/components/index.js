@@ -1,13 +1,27 @@
 // src/components/index.js
 
-// Section Components
-export { default as DesktopOS } from './sections/DesktopOs';
+// ===== LAYOUT COMPONENTS =====
+export { default as Taskbar } from './layout/Taskbar';
 
-// UI Components
+// ===== DESKTOP COMPONENTS =====
+export { default as DesktopOS } from './desktop/DesktopOS';
+export { default as Folder } from './desktop/Folder';
+export { default as FolderWindow } from './desktop/FolderWindow';
+
+// ===== CHAT COMPONENTS =====
+export { default as ChatTerminal } from './chat/ChatTerminal';
+export { default as ChatMessage } from './chat/ChatMessage';
+export { default as ChatInput } from './chat/ChatInput';
+
+// ===== UI COMPONENTS =====
 export { default as TechCard } from './ui/TechCard';
-export { default as Folder } from './ui/Folder';
-export { default as FolderWindow } from './ui/FolderWindow';
-export { default as DraggableTerminal } from './ui/Terminal';
+export { default as LoadingSpinner } from './ui/LoadingSpinner';
+export { default as Button } from './ui/Button';
+export { default as Modal } from './ui/Modal';
 
-// Pages
+// ===== PAGES =====
 export { default as QuotePage } from './pages/QuotePage';
+
+// ===== LEGACY (para compatibilidad) =====
+// Estos exports mantendrán el código existente funcionando
+export { default as DraggableTerminal } from './chat/ChatTerminal'; // Alias para compatibilidad
