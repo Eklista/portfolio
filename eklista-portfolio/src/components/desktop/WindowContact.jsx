@@ -1,33 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { 
   X, 
   Minus, 
   Square, 
   Maximize2,
   Send,
-  Paperclip,
-  Image as ImageIcon,
-  Smile,
-  MoreHorizontal,
-  Trash2,
-  Star,
-  Archive,
-  Tag,
-  Clock,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   User,
   Building,
-  Mail,
-  MessageSquare,
-  Phone,
-  Globe
+  Mail
 } from 'lucide-react';
 
 const WindowContact = ({ 
-  window, 
+  window: windowProp, 
   isMinimized, 
   onClose, 
   onMinimize, 
@@ -52,7 +39,7 @@ const WindowContact = ({
   const [activeField, setActiveField] = useState(null);
   
   const textareaRef = useRef(null);
-  const dragControls = useDragControls(); // NUEVO: Control específico de drag
+  const dragControls = useDragControls();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -83,49 +70,25 @@ const WindowContact = ({
       
       // Auto-cerrar después del éxito
       setTimeout(() => {
-        onClose(window.windowId);
+        onClose(windowProp.windowId);
       }, 2000);
     }, 1500);
   };
-
-  const projectTypes = [
-    { value: 'website', label: 'Sitio Web', icon: Globe },
-    { value: 'app', label: 'Aplicación Web', icon: MessageSquare },
-    { value: 'design', label: 'Diseño UX/UI', icon: Star },
-    { value: 'branding', label: 'Branding', icon: Tag },
-    { value: 'other', label: 'Otro', icon: MoreHorizontal }
-  ];
-
-  const budgetRanges = [
-    'Q500 - Q1,500',
-    'Q1,500 - Q3,000', 
-    'Q3,000 - Q5,000',
-    'Q5,000 - Q10,000',
-    'Q10,000+'
-  ];
-
-  const timelineOptions = [
-    'Lo antes posible',
-    '1-2 semanas',
-    '1 mes',
-    '2-3 meses',
-    'Flexible'
-  ];
 
   if (sent) {
     return (
       <motion.div
         className="absolute bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20"
         style={{
-          left: window.position.x,
-          top: window.position.y,
-          width: window.size.width,
-          height: window.size.height,
-          zIndex: window.zIndex || 100
+          left: window.position?.x || windowProp.position?.x || 150,
+          top: window.position?.y || windowProp.position?.y || 120,
+          width: window.size?.width || windowProp.size?.width || 1000,
+          height: window.size?.height || windowProp.size?.height || 700,
+          zIndex: windowProp.zIndex || 100
         }}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        onMouseDown={() => onBringToFront(window.windowId)}
+        onMouseDown={() => onBringToFront(windowProp.windowId)}
       >
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
           <motion.div
@@ -176,23 +139,23 @@ const WindowContact = ({
     <motion.div
       className="absolute bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20"
       style={{
-        left: window.position.x,
-        top: window.position.y,
-        width: window.size.width,
-        height: window.size.height,
-        zIndex: window.zIndex || 100
+        left: window.position?.x || windowProp.position?.x || 150,
+        top: window.position?.y || windowProp.position?.y || 120,
+        width: window.size?.width || windowProp.size?.width || 1000,
+        height: window.size?.height || windowProp.size?.height || 700,
+        zIndex: windowProp.zIndex || 100
       }}
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      drag={!window.isMaximized}
+      drag={!windowProp.isMaximized}
       dragControls={dragControls}
       dragMomentum={false}
       dragConstraints={{
         left: 0,
-        right: window.innerWidth - window.size.width,
+        right: window.innerWidth - (window.size?.width || 1000),
         top: 0,
-        bottom: window.innerHeight - window.size.height
+        bottom: window.innerHeight - (window.size?.height || 700) - 80
       }}
       whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
     >
@@ -200,8 +163,10 @@ const WindowContact = ({
       <div 
         className="bg-gray-50/80 backdrop-blur-sm px-6 py-3 flex items-center justify-between border-b border-gray-200/50 cursor-move"
         onPointerDown={(e) => {
-          onBringToFront(window.windowId);
-          dragControls.start(e);
+          onBringToFront(windowProp.windowId);
+          if (!windowProp.isMaximized) {
+            dragControls.start(e);
+          }
         }}
       >
         {/* Left side - Gmail style */}
@@ -222,7 +187,7 @@ const WindowContact = ({
         {/* Right side - Window controls */}
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => onMinimize(window)}
+            onClick={() => onMinimize(windowProp)}
             className="w-8 h-8 bg-white/60 hover:bg-yellow-500/20 rounded-lg flex items-center justify-center transition-colors group"
             title="Minimizar"
           >
@@ -230,11 +195,11 @@ const WindowContact = ({
           </button>
           
           <button 
-            onClick={() => onMaximize && onMaximize(window.windowId)}
+            onClick={() => onMaximize && onMaximize(windowProp.windowId)}
             className="w-8 h-8 bg-white/60 hover:bg-green-500/20 rounded-lg flex items-center justify-center transition-colors group" 
-            title={window.isMaximized ? "Restaurar" : "Maximizar"}
+            title={windowProp.isMaximized ? "Restaurar" : "Maximizar"}
           >
-            {window.isMaximized ? (
+            {windowProp.isMaximized ? (
               <Square size={14} className="text-gray-600 group-hover:text-green-600" />
             ) : (
               <Maximize2 size={14} className="text-gray-600 group-hover:text-green-600" />
@@ -242,7 +207,7 @@ const WindowContact = ({
           </button>
           
           <button
-            onClick={() => onClose(window.windowId)}
+            onClick={() => onClose(windowProp.windowId)}
             className="w-8 h-8 bg-white/60 hover:bg-red-500/20 rounded-lg flex items-center justify-center transition-colors group"
             title="Cerrar"
           >
@@ -261,7 +226,7 @@ const WindowContact = ({
               {/* From */}
               <div className="flex items-center text-sm">
                 <span className="w-16 text-gray-600 font-medium">De:</span>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-1">
                   <User size={16} className="text-gray-400" />
                   <input
                     type="text"
@@ -278,7 +243,7 @@ const WindowContact = ({
               {/* Email */}
               <div className="flex items-center text-sm">
                 <span className="w-16 text-gray-600 font-medium">Email:</span>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-1">
                   <Mail size={16} className="text-gray-400" />
                   <input
                     type="email"
@@ -295,7 +260,7 @@ const WindowContact = ({
               {/* Company */}
               <div className="flex items-center text-sm">
                 <span className="w-16 text-gray-600 font-medium">Empresa:</span>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-1">
                   <Building size={16} className="text-gray-400" />
                   <input
                     type="text"
@@ -336,52 +301,43 @@ const WindowContact = ({
             />
           </div>
 
-          {/* Project Details Section */}
+          {/* Project Details Section - SIN SELECTS */}
           <div className="p-4 bg-gray-50/50 border-b border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Project Type */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-2">Tipo de Proyecto</label>
-                <select
+                <input
+                  type="text"
                   value={formData.projectType}
                   onChange={(e) => handleInputChange('projectType', e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="">Seleccionar...</option>
-                  {projectTypes.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
+                  placeholder="Ej: Sitio Web, App, UX/UI, Branding..."
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+                />
               </div>
 
               {/* Budget */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-2">Presupuesto</label>
-                <select
+                <input
+                  type="text"
                   value={formData.budget}
                   onChange={(e) => handleInputChange('budget', e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="">Seleccionar...</option>
-                  {budgetRanges.map((budget) => (
-                    <option key={budget} value={budget}>{budget}</option>
-                  ))}
-                </select>
+                  placeholder="Ej: Q500-1500, Q3000-5000, +Q10000..."
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+                />
               </div>
 
               {/* Timeline */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Timeline</label>
-                <select
+                <label className="block text-xs font-medium text-gray-600 mb-2">Tiempo de Entrega</label>
+                <input
+                  type="text"
                   value={formData.timeline}
                   onChange={(e) => handleInputChange('timeline', e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="">Seleccionar...</option>
-                  {timelineOptions.map((timeline) => (
-                    <option key={timeline} value={timeline}>{timeline}</option>
-                  ))}
-                </select>
+                  placeholder="Ej: 1 semana, 1 mes, 3 meses, Flexible..."
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+                />
               </div>
             </div>
           </div>
@@ -394,111 +350,40 @@ const WindowContact = ({
               onChange={(e) => handleInputChange('message', e.target.value)}
               onFocus={() => setActiveField('message')}
               onBlur={() => setActiveField(null)}
-              placeholder="Escribe tu mensaje aquí...
+              placeholder={`Escribe tu mensaje aquí...
 
 Cuéntame sobre tu proyecto:
 • ¿Qué problema quieres resolver?
 • ¿Quién es tu audiencia objetivo?
 • ¿Tienes referencias o inspiración?
-• ¿Hay fechas importantes a considerar?"
+• ¿Hay fechas importantes a considerar?`}
               className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-400 resize-none leading-relaxed"
               style={{ minHeight: '200px' }}
             />
           </div>
         </div>
 
-        {/* Gmail-style Footer/Actions */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50/50">
-          <div className="flex items-center justify-between">
-            {/* Left side - Formatting options */}
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-1">
-                <button className="w-8 h-8 hover:bg-gray-200 rounded flex items-center justify-center transition-colors" title="Adjuntar archivo">
-                  <Paperclip size={16} className="text-gray-600" />
-                </button>
-                <button className="w-8 h-8 hover:bg-gray-200 rounded flex items-center justify-center transition-colors" title="Insertar imagen">
-                  <ImageIcon size={16} className="text-gray-600" />
-                </button>
-                <button className="w-8 h-8 hover:bg-gray-200 rounded flex items-center justify-center transition-colors" title="Insertar emoji">
-                  <Smile size={16} className="text-gray-600" />
-                </button>
-              </div>
-              
-              <div className="w-px h-6 bg-gray-300"></div>
-              
-              <button 
-                onClick={() => setShowMoreOptions(!showMoreOptions)}
-                className="w-8 h-8 hover:bg-gray-200 rounded flex items-center justify-center transition-colors"
-                title="Más opciones"
-              >
-                <MoreHorizontal size={16} className="text-gray-600" />
-              </button>
-            </div>
-
-            {/* Right side - Send actions */}
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-1 text-xs text-gray-500">
-                <Clock size={12} />
-                <span>{currentTime.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-              
-              <button
-                onClick={() => onClose(window.windowId)}
-                className="w-8 h-8 hover:bg-gray-200 rounded flex items-center justify-center transition-colors"
-                title="Eliminar borrador"
-              >
-                <Trash2 size={16} className="text-gray-600" />
-              </button>
-              
-              <button
-                onClick={handleSend}
-                disabled={!formData.name || !formData.email || !formData.message || isSending}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-6 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span className="text-sm font-medium">Enviando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} />
-                    <span className="text-sm font-medium">Enviar</span>
-                  </>
-                )}
-              </button>
-            </div>
+        {/* Footer SIMPLE - Solo botón de enviar */}
+        <div className="p-6 border-t border-gray-200 bg-white">
+          <div className="flex justify-end">
+            <button
+              onClick={handleSend}
+              disabled={!formData.name || !formData.email || !formData.message || isSending}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-8 py-3 rounded-lg transition-colors disabled:cursor-not-allowed font-medium"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Enviando...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  <span>Enviar Mensaje</span>
+                </>
+              )}
+            </button>
           </div>
-
-          {/* Additional options */}
-          <AnimatePresence>
-            {showMoreOptions && (
-              <motion.div
-                className="mt-3 pt-3 border-t border-gray-200"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-gray-600">Programar envío</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-gray-600">Solicitar confirmación de lectura</span>
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 text-gray-500">
-                    <span>Autoguardado</span>
-                    <CheckCircle2 size={14} className="text-green-500" />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     </motion.div>

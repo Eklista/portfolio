@@ -76,21 +76,58 @@ const DesktopOS = () => {
     }
   ];
 
+  const getInitialWindowDimensions = (category = 'explorer') => {
+    // Verificación de seguridad
+    if (typeof window === 'undefined') {
+      return {
+        width: 800,
+        height: 600,
+        position: { x: 100, y: 100 }
+      };
+    }
+
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const isMobile = screenWidth < 768;
+    
+    if (isMobile) {
+      return {
+        width: screenWidth - 20,
+        height: screenHeight - 120,
+        position: { x: 10, y: 60 }
+      };
+    } else {
+      // Dimensiones para desktop/tablet
+      const configs = {
+        explorer: { width: Math.min(1200, screenWidth - 200), height: Math.min(800, screenHeight - 200) },
+        contact: { width: Math.min(1000, screenWidth - 200), height: Math.min(700, screenHeight - 200) },
+        info: { width: Math.min(1000, screenWidth - 200), height: Math.min(750, screenHeight - 200) }
+      };
+      
+      const config = configs[category] || configs.explorer;
+      
+      return {
+        width: config.width,
+        height: config.height,
+        position: { 
+          x: 100 + (openWindows.length % 3) * 60, 
+          y: 100 + (openWindows.length % 3) * 60 
+        }
+      };
+    }
+  };
+
   const openWindow = (folder) => {
     if (!openWindows.find(w => w.id === folder.id)) {
+      const initialDimensions = getInitialWindowDimensions(folder.category);
+      
       const newWindow = {
         ...folder,
         windowId: Date.now(),
-        position: { 
-          x: 150 + (openWindows.length % 3) * 60, 
-          y: 100 + (openWindows.length % 3) * 60 
-        },
-        size: { width: 900, height: 600 },
-        originalSize: { width: 900, height: 600 },
-        originalPosition: {
-          x: 150 + (openWindows.length % 3) * 60, 
-          y: 100 + (openWindows.length % 3) * 60 
-        },
+        position: initialDimensions.position,
+        size: { width: initialDimensions.width, height: initialDimensions.height },
+        originalSize: { width: initialDimensions.width, height: initialDimensions.height },
+        originalPosition: initialDimensions.position,
         isMinimized: false,
         isMaximized: false,
         zIndex: 100 + openWindows.length
@@ -142,11 +179,12 @@ const DesktopOS = () => {
       w.windowId === windowId ? { ...w, zIndex: maxZ + 1 } : w
     ));
   };
-
-  // Componente para renderizar la ventana correcta según el tipo
+  
   const renderWindow = (window) => {
+    // Separar la key del resto de props para evitar el warning
+    const { windowId, ...windowProps } = window;
+    
     const commonProps = {
-      key: window.windowId,
       window: window,
       isMinimized: window.isMinimized,
       onClose: closeWindow,
@@ -157,11 +195,11 @@ const DesktopOS = () => {
 
     switch (window.category) {
       case 'explorer':
-        return <WindowExplorer {...commonProps} />;
+        return <WindowExplorer key={windowId} {...commonProps} />;
       case 'contact':
-        return <WindowContact {...commonProps} />;
+        return <WindowContact key={windowId} {...commonProps} />;
       default:
-        return <WindowInfo {...commonProps} />;
+        return <WindowInfo key={windowId} {...commonProps} />;
     }
   };
 
