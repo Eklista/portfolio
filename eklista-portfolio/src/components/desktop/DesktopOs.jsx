@@ -14,7 +14,7 @@ import {
   Award,
   Heart
 } from 'lucide-react';
-import { Folder, FolderWindow, ChatTerminal, Taskbar } from '..';
+import { Folder, FolderWindow, ChatTerminal, Taskbar } from '../index';
 
 const DesktopOS = () => {
   const [openWindows, setOpenWindows] = useState([]);
@@ -29,7 +29,7 @@ const DesktopOS = () => {
       setIsChatOpen(true);
     }
   }, []);
-  
+
   // Estructura mejorada de carpetas organizadas por categorías
   const folders = [
     // Primera fila - Servicios principales
