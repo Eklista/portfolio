@@ -137,7 +137,7 @@ Escribe el número o usa el botón "Cotizar" del menú.`
       description: '¿Quién soy?',
       response: `eklista@creative-studio:~$ whoami
 ━━━━━━━━━━━━━━━━━━━━━━━━
-Eduardo Klista - Creative Developer
+Eklista - Creative Developer
 Apasionado por crear experiencias digitales que importan.
 
 "El buen diseño es tan poco diseño como sea posible"

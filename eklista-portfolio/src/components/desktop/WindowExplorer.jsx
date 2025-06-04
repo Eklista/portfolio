@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { 
   X, 
   Minus, 
@@ -29,6 +29,7 @@ const WindowExplorer = ({
 }) => {
   const [currentPath, setCurrentPath] = useState([window.id]);
   const [selectedProject, setSelectedProject] = useState(null);
+  const dragControls = useDragControls(); // AGREGADO: Control de drag
 
   if (isMinimized) return null;
 
@@ -88,6 +89,14 @@ const WindowExplorer = ({
   const currentProjects = getCurrentProjects();
   const breadcrumbs = getBreadcrumbs();
 
+  // AGREGADO: Constraints para el drag
+  const dragConstraints = {
+    left: 0,
+    right: window.innerWidth - window.size.width,
+    top: 0,
+    bottom: window.innerHeight - window.size.height
+  };
+
   return (
     <>
       <motion.div
@@ -103,12 +112,21 @@ const WindowExplorer = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         drag={!window.isMaximized}
+        dragControls={dragControls} // CORREGIDO: Usando dragControls
         dragMomentum={false}
-        onMouseDown={() => onBringToFront(window.windowId)}
+        dragConstraints={window.isMaximized ? { left: 0, right: 0, top: 0, bottom: 0 } : dragConstraints}
         whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
       >
         {/* Window Header */}
-        <div className="bg-gray-100/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-gray-200/50 cursor-move">
+        <div 
+          className="bg-gray-100/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-gray-200/50 cursor-move"
+          onPointerDown={(e) => {
+            onBringToFront(window.windowId);
+            if (!window.isMaximized) {
+              dragControls.start(e);
+            }
+          }}
+        >
           {/* Navigation & Title */}
           <div className="flex items-center space-x-3 flex-1">
             {/* Navigation buttons */}

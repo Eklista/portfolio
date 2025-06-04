@@ -100,9 +100,9 @@ Estoy aquí para ayudarte con:
 
 ¿En qué puedo ayudarte hoy?`,
 
-    'quien': `¡Hola! Soy Eduardo Klista, pero todos me conocen como **EKLISTA**.
+    'quien': `¡Hola! Soy Pablo Lacán, pero todos me conocen como **EKLISTA**.
 
-👨‍💻 **Desarrollador Full-Stack & Diseñador**
+👨‍💻 **Diseñador gráfico y Web**
 🎨 **5+ años de experiencia**
 🚀 **50+ proyectos completados**
 🇬🇹 **Basado en Guatemala**

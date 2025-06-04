@@ -142,45 +142,34 @@ const DesktopOS = () => {
     ));
   };
 
+  // FUNCIÓN CORREGIDA: updateWindowState para manejar cambios de posición y tamaño
+  const updateWindowState = (windowId, updates) => {
+    setOpenWindows(openWindows.map(w => 
+      w.windowId === windowId ? { ...w, ...updates } : w
+    ));
+  };
+
   // Componente para renderizar la ventana correcta según el tipo
   const renderWindow = (window) => {
+    // Props comunes para todas las ventanas
+    const commonProps = {
+      key: window.windowId,
+      window: window,
+      isMinimized: window.isMinimized,
+      onClose: closeWindow,
+      onMinimize: toggleWindow,
+      onMaximize: maximizeWindow,
+      onBringToFront: bringToFront,
+      onUpdateWindow: updateWindowState // NUEVA PROP para actualizaciones
+    };
+
     switch (window.category) {
       case 'explorer':
-        return (
-          <WindowExplorer
-            key={window.windowId}
-            window={window}
-            isMinimized={window.isMinimized}
-            onClose={closeWindow}
-            onMinimize={toggleWindow}
-            onMaximize={maximizeWindow}
-            onBringToFront={bringToFront}
-          />
-        );
+        return <WindowExplorer {...commonProps} />;
       case 'contact':
-        return (
-          <WindowContact
-            key={window.windowId}
-            window={window}
-            isMinimized={window.isMinimized}
-            onClose={closeWindow}
-            onMinimize={toggleWindow}
-            onMaximize={maximizeWindow}
-            onBringToFront={bringToFront}
-          />
-        );
+        return <WindowContact {...commonProps} />;
       default:
-        return (
-          <WindowInfo
-            key={window.windowId}
-            window={window}
-            isMinimized={window.isMinimized}
-            onClose={closeWindow}
-            onMinimize={toggleWindow}
-            onMaximize={maximizeWindow}
-            onBringToFront={bringToFront}
-          />
-        );
+        return <WindowInfo {...commonProps} />;
     }
   };
 
