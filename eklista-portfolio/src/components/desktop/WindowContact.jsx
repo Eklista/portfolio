@@ -46,14 +46,6 @@ const WindowContact = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [formData.message]);
-
   if (isMinimized) return null;
 
   const handleInputChange = (field, value) => {
@@ -137,7 +129,7 @@ const WindowContact = ({
 
   return (
     <motion.div
-      className="absolute bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20"
+      className="absolute bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20 flex flex-col"
       style={{
         left: window.position?.x || windowProp.position?.x || 150,
         top: window.position?.y || windowProp.position?.y || 120,
@@ -161,7 +153,7 @@ const WindowContact = ({
     >
       {/* Gmail-style Header */}
       <div 
-        className="bg-gray-50/80 backdrop-blur-sm px-6 py-3 flex items-center justify-between border-b border-gray-200/50 cursor-move"
+        className="bg-gray-50/80 backdrop-blur-sm px-6 py-3 flex items-center justify-between border-b border-gray-200/50 cursor-move flex-shrink-0"
         onPointerDown={(e) => {
           onBringToFront(windowProp.windowId);
           if (!windowProp.isMaximized) {
@@ -216,155 +208,159 @@ const WindowContact = ({
         </div>
       </div>
 
-      {/* Gmail-style Compose Area */}
-      <div className="flex flex-col h-full">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {/* Email Form Fields */}
-        <div className="flex-1 overflow-y-auto">
-          {/* From/To Section */}
-          <div className="p-4 border-b border-gray-100">
-            <div className="space-y-3">
-              {/* From */}
-              <div className="flex items-center text-sm">
-                <span className="w-16 text-gray-600 font-medium">De:</span>
-                <div className="flex items-center space-x-2 flex-1">
-                  <User size={16} className="text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    onFocus={() => setActiveField('name')}
-                    onBlur={() => setActiveField(null)}
-                    placeholder="Tu nombre"
-                    className="flex-1 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="flex items-center text-sm">
-                <span className="w-16 text-gray-600 font-medium">Email:</span>
-                <div className="flex items-center space-x-2 flex-1">
-                  <Mail size={16} className="text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    onFocus={() => setActiveField('email')}
-                    onBlur={() => setActiveField(null)}
-                    placeholder="tu@email.com"
-                    className="flex-1 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400"
-                  />
-                </div>
-              </div>
-
-              {/* Company */}
-              <div className="flex items-center text-sm">
-                <span className="w-16 text-gray-600 font-medium">Empresa:</span>
-                <div className="flex items-center space-x-2 flex-1">
-                  <Building size={16} className="text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) => handleInputChange('company', e.target.value)}
-                    onFocus={() => setActiveField('company')}
-                    onBlur={() => setActiveField(null)}
-                    placeholder="Tu empresa (opcional)"
-                    className="flex-1 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400"
-                  />
-                </div>
-              </div>
-
-              {/* To */}
-              <div className="flex items-center text-sm">
-                <span className="w-16 text-gray-600 font-medium">Para:</span>
-                <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-full">
-                  <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">EK</span>
-                  </div>
-                  <span className="text-gray-700 font-medium">EKLISTA</span>
-                  <span className="text-gray-500">&lt;hello@eklista.com&gt;</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Subject Line */}
-          <div className="px-4 py-3 border-b border-gray-100">
-            <input
-              type="text"
-              value={formData.subject}
-              onChange={(e) => handleInputChange('subject', e.target.value)}
-              onFocus={() => setActiveField('subject')}
-              onBlur={() => setActiveField(null)}
-              placeholder="Asunto del mensaje"
-              className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-400 font-medium"
-            />
-          </div>
-
-          {/* Project Details Section - SIN SELECTS */}
-          <div className="p-4 bg-gray-50/50 border-b border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Project Type */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Tipo de Proyecto</label>
+        <div className="p-4 border-b border-gray-100">
+          <div className="space-y-3">
+            {/* From */}
+            <div className="flex items-center text-sm">
+              <span className="w-16 text-gray-600 font-medium flex-shrink-0">De:</span>
+              <div className="flex items-center space-x-2 flex-1">
+                <User size={16} className="text-gray-400" />
                 <input
                   type="text"
-                  value={formData.projectType}
-                  onChange={(e) => handleInputChange('projectType', e.target.value)}
-                  placeholder="Ej: Sitio Web, App, UX/UI, Branding..."
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
-                />
-              </div>
-
-              {/* Budget */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Presupuesto</label>
-                <input
-                  type="text"
-                  value={formData.budget}
-                  onChange={(e) => handleInputChange('budget', e.target.value)}
-                  placeholder="Ej: Q500-1500, Q3000-5000, +Q10000..."
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
-                />
-              </div>
-
-              {/* Timeline */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Tiempo de Entrega</label>
-                <input
-                  type="text"
-                  value={formData.timeline}
-                  onChange={(e) => handleInputChange('timeline', e.target.value)}
-                  placeholder="Ej: 1 semana, 1 mes, 3 meses, Flexible..."
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onFocus={() => setActiveField('name')}
+                  onBlur={() => setActiveField(null)}
+                  placeholder="Tu nombre"
+                  className="flex-1 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400"
                 />
               </div>
             </div>
-          </div>
 
-          {/* Message Body */}
-          <div className="p-4 flex-1">
-            <textarea
-              ref={textareaRef}
-              value={formData.message}
-              onChange={(e) => handleInputChange('message', e.target.value)}
-              onFocus={() => setActiveField('message')}
-              onBlur={() => setActiveField(null)}
-              placeholder={`Escribe tu mensaje aquí...
+            {/* Email */}
+            <div className="flex items-center text-sm">
+              <span className="w-16 text-gray-600 font-medium flex-shrink-0">Email:</span>
+              <div className="flex items-center space-x-2 flex-1">
+                <Mail size={16} className="text-gray-400" />
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onFocus={() => setActiveField('email')}
+                  onBlur={() => setActiveField(null)}
+                  placeholder="tu@email.com"
+                  className="flex-1 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            {/* Company */}
+            <div className="flex items-center text-sm">
+              <span className="w-16 text-gray-600 font-medium flex-shrink-0">Empresa:</span>
+              <div className="flex items-center space-x-2 flex-1">
+                <Building size={16} className="text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => handleInputChange('company', e.target.value)}
+                  onFocus={() => setActiveField('company')}
+                  onBlur={() => setActiveField(null)}
+                  placeholder="Tu empresa (opcional)"
+                  className="flex-1 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            {/* To */}
+            <div className="flex items-center text-sm">
+              <span className="w-16 text-gray-600 font-medium flex-shrink-0">Para:</span>
+              <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-full">
+                <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">EK</span>
+                </div>
+                <span className="text-gray-700 font-medium">EKLISTA</span>
+                <span className="text-gray-500">&lt;hello@eklista.com&gt;</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Subject Line */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <input
+            type="text"
+            value={formData.subject}
+            onChange={(e) => handleInputChange('subject', e.target.value)}
+            onFocus={() => setActiveField('subject')}
+            onBlur={() => setActiveField(null)}
+            placeholder="Asunto del mensaje"
+            className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-400 font-medium"
+          />
+        </div>
+
+        {/* Project Details Section */}
+        <div className="p-4 bg-gray-50/50 border-b border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Project Type */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">Tipo de Proyecto</label>
+              <input
+                type="text"
+                value={formData.projectType}
+                onChange={(e) => handleInputChange('projectType', e.target.value)}
+                placeholder="Ej: Sitio Web, App, UX/UI, Branding..."
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+              />
+            </div>
+
+            {/* Budget */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">Presupuesto</label>
+              <input
+                type="text"
+                value={formData.budget}
+                onChange={(e) => handleInputChange('budget', e.target.value)}
+                placeholder="Ej: Q500-1500, Q3000-5000, +Q10000..."
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+              />
+            </div>
+
+            {/* Timeline */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">Tiempo de Entrega</label>
+              <input
+                type="text"
+                value={formData.timeline}
+                onChange={(e) => handleInputChange('timeline', e.target.value)}
+                placeholder="Ej: 1 semana, 1 mes, 3 meses, Flexible..."
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none placeholder-gray-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Message Body */}
+        <div className="p-4 flex-1">
+          <textarea
+            ref={textareaRef}
+            value={formData.message}
+            onChange={(e) => handleInputChange('message', e.target.value)}
+            onFocus={() => setActiveField('message')}
+            onBlur={() => setActiveField(null)}
+            placeholder={`Escribe tu mensaje aquí...
 
 Cuéntame sobre tu proyecto:
 • ¿Qué problema quieres resolver?
 • ¿Quién es tu audiencia objetivo?
 • ¿Tienes referencias o inspiración?
 • ¿Hay fechas importantes a considerar?`}
-              className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-400 resize-none leading-relaxed"
-              style={{ minHeight: '200px' }}
-            />
-          </div>
+            className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-400 resize-none leading-relaxed"
+            style={{ 
+              minHeight: '150px', 
+              maxHeight: '300px',
+              height: 'auto'
+            }}
+            rows="6"
+          />
         </div>
+      </div>
 
-        {/* Footer SIMPLE - Solo botón de enviar */}
-        <div className="p-6 border-t border-gray-200 bg-white">
+      {/* Footer STICKY - Siempre visible */}
+      <div className="border-t border-gray-200 bg-white flex-shrink-0">
+        <div className="p-6">
           <div className="flex justify-end">
             <button
               onClick={handleSend}
