@@ -95,6 +95,7 @@ const DesktopOS = () => {
         isMaximized: false,
         zIndex: 100 + openWindows.length
       };
+      
       setOpenWindows([...openWindows, newWindow]);
     }
   };
@@ -142,16 +143,8 @@ const DesktopOS = () => {
     ));
   };
 
-  // FUNCIÓN CORREGIDA: updateWindowState para manejar cambios de posición y tamaño
-  const updateWindowState = (windowId, updates) => {
-    setOpenWindows(openWindows.map(w => 
-      w.windowId === windowId ? { ...w, ...updates } : w
-    ));
-  };
-
   // Componente para renderizar la ventana correcta según el tipo
   const renderWindow = (window) => {
-    // Props comunes para todas las ventanas
     const commonProps = {
       key: window.windowId,
       window: window,
@@ -159,8 +152,7 @@ const DesktopOS = () => {
       onClose: closeWindow,
       onMinimize: toggleWindow,
       onMaximize: maximizeWindow,
-      onBringToFront: bringToFront,
-      onUpdateWindow: updateWindowState // NUEVA PROP para actualizaciones
+      onBringToFront: bringToFront
     };
 
     switch (window.category) {
@@ -216,14 +208,18 @@ const DesktopOS = () => {
                 />
               </div>
               
-              {/* Sobre Mí y Contacto - Tercera fila, lado a lado */}
-              <div className="flex justify-start space-x-8">
+              {/* Sobre Mí - Tercera fila, alineado a la izquierda */}
+              <div className="flex justify-start">
                 <Folder
                   key={folders[2].id}
                   folder={folders[2]}
                   index={2}
                   onClick={openWindow}
                 />
+              </div>
+              
+              {/* Contacto - Cuarta fila, alineado a la izquierda */}
+              <div className="flex justify-start">
                 <Folder
                   key={folders[3].id}
                   folder={folders[3]}
