@@ -9,12 +9,15 @@ import {
   Mail,
   Code,
   PenTool,
-  Folder as FolderIcon,
-  FileText,
   Award,
-  Heart
+  Monitor
 } from 'lucide-react';
-import { Folder, FolderWindow, ChatTerminal, Taskbar } from '..';
+import { Folder, Taskbar } from '..';
+import ModernChat from '../chat/ModernChat';
+import WindowExplorer from './WindowExplorer';
+import WindowInfo from './WindowInfo';
+import WindowContact from './WindowContact'; // NUEVO IMPORT
+import { explorerStructure } from '../../data/projects';
 
 const DesktopOS = () => {
   const [openWindows, setOpenWindows] = useState([]);
@@ -22,180 +25,123 @@ const DesktopOS = () => {
   const [chatMinimized, setChatMinimized] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Auto-abrir terminal en desktop
+  // Auto-abrir chat en desktop
   useEffect(() => {
     const isDesktop = window.innerWidth >= 1024;
     if (isDesktop) {
-      setIsChatOpen(true);
+      setTimeout(() => {
+        setIsChatOpen(true);
+      }, 1500);
     }
   }, []);
 
-  // Estructura mejorada de carpetas organizadas por categorías
-  const folders = [
-    // Primera fila - Servicios principales
-    {
-      id: 'web-development',
-      name: 'Desarrollo Web',
-      icon: Code,
-      color: 'from-blue-500 to-cyan-500',
-      category: 'services',
-      content: {
-        title: 'Desarrollo Web',
-        items: [
-          'Aplicaciones React/Next.js',
-          'Sitios WordPress Personalizados', 
-          'E-commerce y Tiendas Online',
-          'APIs y Backend Development',
-          'PWAs y Aplicaciones Móviles',
-          'Optimización y Performance'
-        ]
-      }
-    },
-    {
-      id: 'ux-ui-design',
-      name: 'UX/UI Design',
-      icon: PenTool,
-      color: 'from-purple-500 to-pink-500',
-      category: 'services',
-      content: {
-        title: 'UX/UI Design',
-        items: [
-          'Investigación de Usuarios',
-          'Wireframes y Prototipos',
-          'Interfaces Web y Mobile',
-          'Design Systems',
-          'Testing de Usabilidad',
-          'Optimización de Conversiones'
-        ]
-      }
-    },
-    {
-      id: 'graphic-design',
-      name: 'Diseño Gráfico',
-      icon: Palette,
-      color: 'from-orange-500 to-red-500',
-      category: 'services',
-      content: {
-        title: 'Diseño Gráfico & Branding',
-        items: [
-          'Identidad Visual y Logos',
-          'Branding Corporativo',
-          'Diseño Editorial',
-          'Packaging y Etiquetas',
-          'Marketing Digital',
-          'Ilustraciones Personalizadas'
-        ]
-      }
-    },
+  const isMobile = window.innerWidth < 1024;
 
-    // Segunda fila - Portfolio y trabajos
+  // Estructura de carpetas del escritorio
+  const folders = [
     {
-      id: 'web-projects',
-      name: 'Proyectos Web',
-      icon: Globe,
-      color: 'from-emerald-500 to-teal-500',
-      category: 'portfolio',
-      content: {
-        title: 'Portfolio - Proyectos Web',
-        items: [
-          'E-commerce Fashion Store',
-          'SaaS Dashboard Analytics',
-          'Restaurant Booking System',
-          'Real Estate Platform',
-          'Corporate Website',
-          'Portfolio Photography'
-        ]
-      }
-    },
-    {
-      id: 'design-portfolio',
-      name: 'Portfolio Diseño',
+      id: 'portfolio',
+      name: 'Mi Portfolio',
       icon: Briefcase,
       color: 'from-indigo-500 to-purple-500',
-      category: 'portfolio',
-      content: {
-        title: 'Portfolio - Diseño',
-        items: [
-          'Banking App UI/UX',
-          'Healthcare Dashboard',
-          'Mobile App Redesign',
-          'Brand Identity Café Local',
-          'Editorial Magazine Layout',
-          'Packaging Cosméticos'
-        ]
-      }
+      category: 'explorer',
+      ...explorerStructure.portfolio
     },
     {
-      id: 'photography',
-      name: 'Fotografía',
-      icon: Camera,
-      color: 'from-pink-500 to-rose-500',
-      category: 'portfolio',
-      content: {
-        title: 'Fotografía',
-        items: [
-          'Retratos Corporativos',
-          'Fotografía de Producto',
-          'Eventos y Bodas',
-          'Arquitectura y Espacios',
-          'Street Photography',
-          'Sesiones Comerciales'
-        ]
-      }
+      id: 'servicios',
+      name: 'Mis Servicios',
+      icon: Code,
+      color: 'from-green-500 to-emerald-500',
+      category: 'info',
+      ...explorerStructure.servicios
     },
-
-    // Tercera fila - Información personal y contacto
     {
-      id: 'about-me',
+      id: 'sobre-mi',
       name: 'Sobre Mí',
       icon: User,
       color: 'from-violet-500 to-purple-500',
-      category: 'personal',
-      content: {
-        title: 'Acerca de EKLISTA',
-        items: [
-          'Mi Historia y Experiencia',
-          'Filosofía de Diseño',
-          'Habilidades Técnicas',
-          'Formación y Certificaciones',
-          'Clientes y Testimonios',
-          'Pasiones y Hobbies'
-        ]
-      }
+      category: 'info',
+      ...explorerStructure['sobre-mi']
     },
     {
-      id: 'achievements',
-      name: 'Logros',
-      icon: Award,
-      color: 'from-yellow-500 to-orange-500',
-      category: 'personal',
-      content: {
-        title: 'Logros y Reconocimientos',
-        items: [
-          'Proyectos Destacados 2024',
-          'Certificaciones Obtenidas',
-          'Reconocimientos de Clientes',
-          'Participación en Eventos',
-          'Contribuciones Open Source',
-          'Mentorías y Enseñanza'
-        ]
-      }
-    },
-    {
-      id: 'contact',
+      id: 'contacto',
       name: 'Contacto',
       icon: Mail,
-      color: 'from-green-500 to-emerald-500',
+      color: 'from-blue-500 to-cyan-500',
       category: 'contact',
       content: {
-        title: 'Contacto',
-        items: [
-          'hello@eklista.com',
-          'WhatsApp: +502 1234-5678',
-          'LinkedIn: /in/eklista',
-          'GitHub: @eklista',
-          'Instagram: @eklista.design',
-          'Agenda una Reunión'
+        title: 'Información de Contacto',
+        description: 'Formas de contactarme para tu próximo proyecto'
+      }
+    },
+    // Carpetas adicionales para completar el grid
+    {
+      id: 'certificaciones',
+      name: 'Certificaciones',
+      icon: Award,
+      color: 'from-yellow-500 to-orange-500',
+      category: 'info',
+      content: {
+        title: 'Certificaciones y Logros',
+        description: 'Mis credenciales y reconocimientos profesionales',
+        sections: [
+          {
+            title: 'Certificaciones Técnicas',
+            description: 'Credenciales en las últimas tecnologías',
+            content: [
+              '🏆 React Advanced Certification - Meta (2024)',
+              '🏆 AWS Solutions Architect - Amazon (2023)',
+              '🏆 Google UX Design Certificate (2023)',
+              '🏆 Advanced TypeScript - Microsoft (2024)',
+              '🏆 Next.js Expert Certification (2024)'
+            ]
+          },
+          {
+            title: 'Reconocimientos',
+            description: 'Premios y menciones recibidas',
+            content: [
+              '🥇 Mejor Portfolio Digital - Awwwards (2024)',
+              '🥇 Proyecto del Año - Guatemala Tech Awards (2023)',
+              '🥈 Innovación en UX - Design Awards GT (2024)',
+              '⭐ 5.0 estrellas promedio en testimonios de clientes',
+              '📈 100% de proyectos entregados a tiempo'
+            ]
+          }
+        ]
+      }
+    },
+    {
+      id: 'recursos',
+      name: 'Recursos',
+      icon: Monitor,
+      color: 'from-teal-500 to-cyan-500',
+      category: 'info',
+      content: {
+        title: 'Recursos y Herramientas',
+        description: 'Tools y recursos que uso en mis proyectos',
+        sections: [
+          {
+            title: 'Design Tools',
+            description: 'Herramientas de diseño que domino',
+            content: [
+              '🎨 Figma - Diseño de interfaces y prototipos',
+              '🎨 Adobe Creative Suite - Diseño gráfico completo',
+              '🎨 Sketch - Diseño de productos digitales',
+              '🎨 InVision - Prototipado y colaboración',
+              '🎨 Principle - Animaciones de UI'
+            ]
+          },
+          {
+            title: 'Development Stack',
+            description: 'Tecnologías de desarrollo actuales',
+            content: [
+              '⚡ Frontend: React, Next.js, TypeScript, Tailwind',
+              '⚡ Backend: Node.js, Express, MongoDB, PostgreSQL',
+              '⚡ Tools: Git, Docker, AWS, Vercel, Figma',
+              '⚡ Testing: Jest, Cypress, Testing Library',
+              '⚡ CMS: WordPress, Strapi, Contentful'
+            ]
+          }
         ]
       }
     }
@@ -210,8 +156,14 @@ const DesktopOS = () => {
           x: 150 + (openWindows.length % 3) * 60, 
           y: 100 + (openWindows.length % 3) * 60 
         },
-        size: { width: 650, height: 500 },
+        size: { width: 900, height: 600 }, // Ventanas más grandes
+        originalSize: { width: 900, height: 600 },
+        originalPosition: {
+          x: 150 + (openWindows.length % 3) * 60, 
+          y: 100 + (openWindows.length % 3) * 60 
+        },
         isMinimized: false,
+        isMaximized: false,
         zIndex: 100 + openWindows.length
       };
       setOpenWindows([...openWindows, newWindow]);
@@ -228,6 +180,32 @@ const DesktopOS = () => {
     ));
   };
 
+  const maximizeWindow = (windowId) => {
+    setOpenWindows(openWindows.map(w => {
+      if (w.windowId === windowId) {
+        if (w.isMaximized) {
+          return {
+            ...w,
+            isMaximized: false,
+            position: w.originalPosition,
+            size: w.originalSize
+          };
+        } else {
+          return {
+            ...w,
+            isMaximized: true,
+            position: { x: 20, y: 20 },
+            size: { 
+              width: window.innerWidth - 40, 
+              height: window.innerHeight - 120
+            }
+          };
+        }
+      }
+      return w;
+    }));
+  };
+
   const bringToFront = (windowId) => {
     const maxZ = Math.max(...openWindows.map(w => w.zIndex || 100));
     setOpenWindows(openWindows.map(w => 
@@ -235,28 +213,61 @@ const DesktopOS = () => {
     ));
   };
 
-  // Agrupar carpetas por categoría para mejor organización visual
-  const groupedFolders = {
-    services: folders.filter(f => f.category === 'services'),
-    portfolio: folders.filter(f => f.category === 'portfolio'),
-    personal: folders.filter(f => f.category === 'personal'),
-    contact: folders.filter(f => f.category === 'contact')
+  // Componente para renderizar la ventana correcta según el tipo
+  const renderWindow = (window) => {
+    switch (window.category) {
+      case 'explorer':
+        return (
+          <WindowExplorer
+            key={window.windowId}
+            window={window}
+            isMinimized={window.isMinimized}
+            onClose={closeWindow}
+            onMinimize={toggleWindow}
+            onMaximize={maximizeWindow}
+            onBringToFront={bringToFront}
+          />
+        );
+      case 'contact':
+        return (
+          <WindowContact
+            key={window.windowId}
+            window={window}
+            isMinimized={window.isMinimized}
+            onClose={closeWindow}
+            onMinimize={toggleWindow}
+            onMaximize={maximizeWindow}
+            onBringToFront={bringToFront}
+          />
+        );
+      default:
+        return (
+          <WindowInfo
+            key={window.windowId}
+            window={window}
+            isMinimized={window.isMinimized}
+            onClose={closeWindow}
+            onMinimize={toggleWindow}
+            onMaximize={maximizeWindow}
+            onBringToFront={bringToFront}
+          />
+        );
+    }
   };
 
   return (
     <div className="h-screen w-full relative overflow-hidden select-none">
-      {/* Wallpaper fijo - sin sistema de cambio */}
+      {/* Wallpaper fijo */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: "url('/wallpaper.jpg')",
         }}
       >
-        {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
 
-      {/* Title Section - Back to left side, more subtle */}
+      {/* Title Section */}
       <div className="absolute top-12 left-8 z-40">
         <motion.h1 
           className="text-5xl md:text-7xl font-black text-white tracking-tight font-poppins"
@@ -285,7 +296,6 @@ const DesktopOS = () => {
       <div className="absolute inset-0 pt-44 md:pt-40 pb-20 px-8 md:px-12">
         {/* Desktop Layout */}
         <div className="hidden lg:block h-full">
-          {/* Folders Section - Alineados a la izquierda como escritorio real */}
           <div className="w-auto">
             <motion.div 
               className="grid grid-cols-3 gap-8 p-8 w-fit"
@@ -326,30 +336,21 @@ const DesktopOS = () => {
         </div>
       </div>
 
-      {/* Chat Terminal */}
-      <ChatTerminal
+      {/* Modern Chat */}
+      <ModernChat
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         onMinimize={() => setChatMinimized(!chatMinimized)}
         isMinimized={chatMinimized}
-        isMobile={window.innerWidth < 1024}
+        isMobile={isMobile}
       />
 
-      {/* Windows */}
+      {/* Windows - Renderizado dinámico según tipo */}
       <AnimatePresence>
-        {openWindows.map((window) => (
-          <FolderWindow
-            key={window.windowId}
-            window={window}
-            isMinimized={window.isMinimized}
-            onClose={closeWindow}
-            onMinimize={toggleWindow}
-            onBringToFront={bringToFront}
-          />
-        ))}
+        {openWindows.map((window) => renderWindow(window))}
       </AnimatePresence>
 
-      {/* Taskbar - Props simplificados */}
+      {/* Taskbar */}
       <Taskbar
         openWindows={openWindows}
         onWindowToggle={toggleWindow}

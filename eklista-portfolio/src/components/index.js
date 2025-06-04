@@ -1,4 +1,4 @@
-// src/components/index.js
+// src/components/index.js - ACTUALIZADO con nuevos componentes
 
 // ===== LAYOUT COMPONENTS =====
 export { default as Taskbar } from './layout/Taskbar';
@@ -6,10 +6,14 @@ export { default as Taskbar } from './layout/Taskbar';
 // ===== DESKTOP COMPONENTS =====
 export { default as DesktopOS } from './desktop/DesktopOs';
 export { default as Folder } from './desktop/Folder';
-export { default as FolderWindow } from './desktop/FolderWindow';
+export { default as FolderWindow } from './desktop/FolderWindow';    // LEGACY - para compatibilidad
+export { default as WindowExplorer } from './desktop/WindowExplorer'; // NUEVO
+export { default as WindowInfo } from './desktop/WindowInfo';         // NUEVO
+export { default as WindowContact } from './desktop/WindowContact';   // NUEVO
 
 // ===== CHAT COMPONENTS =====
-export { default as ChatTerminal } from './chat/ChatTerminal';
+export { default as ModernChat } from './chat/ModernChat';
+export { default as ChatTerminal } from './chat/ChatTerminal';   // LEGACY - para compatibilidad
 export { default as ChatMessage } from './chat/ChatMessage';
 export { default as ChatInput } from './chat/ChatInput';
 
@@ -23,5 +27,4 @@ export { default as Modal } from './ui/Modal';
 export { default as QuotePage } from './pages/QuotePage';
 
 // ===== LEGACY (para compatibilidad) =====
-// Estos exports mantendrán el código existente funcionando
-export { default as DraggableTerminal } from './chat/ChatTerminal'; // Alias para compatibilidad
+export { default as DraggableTerminal } from './chat/ChatTerminal';

@@ -1,11 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { X, Minus, Square, Maximize2 } from 'lucide-react';
 
 const FolderWindow = ({ 
   window, 
   isMinimized, 
   onClose, 
   onMinimize, 
+  onMaximize, // Nueva prop
   onBringToFront 
 }) => {
   if (isMinimized) return null;
@@ -23,31 +25,50 @@ const FolderWindow = ({
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      drag
+      drag={!window.isMaximized} // No permitir drag si está maximizada
       dragMomentum={false}
       onMouseDown={() => onBringToFront(window.windowId)}
       whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
     >
       {/* Window Header */}
       <div className="bg-gray-100/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between border-b border-gray-200/50 cursor-move">
+        {/* Window title and icon */}
         <div className="flex items-center space-x-3">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => onClose(window.windowId)}
-              className="w-3 h-3 bg-red-500 rounded-full hover:bg-red-600 transition-colors shadow-sm"
-            ></button>
-            <button
-              onClick={() => onMinimize(window.windowId)}
-              className="w-3 h-3 bg-yellow-500 rounded-full hover:bg-yellow-600 transition-colors shadow-sm"
-            ></button>
-            <button className="w-3 h-3 bg-green-500 rounded-full hover:bg-green-600 transition-colors shadow-sm"></button>
+          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${window.color} flex items-center justify-center shadow-sm`}>
+            <window.icon size={18} className="text-white" />
           </div>
-          <div className="flex items-center space-x-3 ml-4">
-            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${window.color} flex items-center justify-center shadow-sm`}>
-              <window.icon size={18} className="text-white" />
-            </div>
-            <span className="font-semibold text-gray-800">{window.content.title}</span>
-          </div>
+          <span className="font-semibold text-gray-800">{window.content.title}</span>
+        </div>
+
+        {/* Window controls */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => onMinimize(window)}
+            className="w-8 h-8 bg-white/60 hover:bg-yellow-500/20 rounded-lg flex items-center justify-center transition-colors group"
+            title="Minimizar"
+          >
+            <Minus size={14} className="text-gray-600 group-hover:text-yellow-600" />
+          </button>
+          
+          <button 
+            onClick={() => onMaximize && onMaximize(window.windowId)}
+            className="w-8 h-8 bg-white/60 hover:bg-green-500/20 rounded-lg flex items-center justify-center transition-colors group" 
+            title={window.isMaximized ? "Restaurar" : "Maximizar"}
+          >
+            {window.isMaximized ? (
+              <Square size={14} className="text-gray-600 group-hover:text-green-600" />
+            ) : (
+              <Maximize2 size={14} className="text-gray-600 group-hover:text-green-600" />
+            )}
+          </button>
+          
+          <button
+            onClick={() => onClose(window.windowId)}
+            className="w-8 h-8 bg-white/60 hover:bg-red-500/20 rounded-lg flex items-center justify-center transition-colors group"
+            title="Cerrar"
+          >
+            <X size={14} className="text-gray-600 group-hover:text-red-600" />
+          </button>
         </div>
       </div>
 
