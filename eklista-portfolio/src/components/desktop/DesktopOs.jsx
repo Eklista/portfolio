@@ -21,7 +21,6 @@ const DesktopOS = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [currentWallpaper, setCurrentWallpaper] = useState('wallpaper.jpg');
 
   // Auto-abrir terminal en desktop
   useEffect(() => {
@@ -30,13 +29,7 @@ const DesktopOS = () => {
       setIsChatOpen(true);
     }
   }, []);
-
-  const handleWallpaperChange = (wallpaperPath) => {
-    console.log('DesktopOS received wallpaper change:', wallpaperPath);
-    setCurrentWallpaper(wallpaperPath);
-    console.log('Current wallpaper state updated to:', wallpaperPath);
-  };
-
+  
   // Estructura mejorada de carpetas organizadas por categorías
   const folders = [
     // Primera fila - Servicios principales
@@ -252,17 +245,13 @@ const DesktopOS = () => {
 
   return (
     <div className="h-screen w-full relative overflow-hidden select-none">
-      {/* Custom Wallpaper */}
+      {/* Wallpaper fijo - sin sistema de cambio */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('/${currentWallpaper}')`,
+          backgroundImage: "url('/wallpaper.jpg')",
         }}
       >
-        {/* Debug info */}
-        <div className="absolute top-4 right-4 bg-black/50 text-white text-xs p-2 rounded z-50">
-          Current: {currentWallpaper}
-        </div>
         {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
@@ -360,7 +349,7 @@ const DesktopOS = () => {
         ))}
       </AnimatePresence>
 
-      {/* Taskbar */}
+      {/* Taskbar - Props simplificados */}
       <Taskbar
         openWindows={openWindows}
         onWindowToggle={toggleWindow}
@@ -368,8 +357,6 @@ const DesktopOS = () => {
         isChatOpen={isChatOpen}
         showNotifications={showNotifications}
         onNotificationsToggle={() => setShowNotifications(!showNotifications)}
-        onWallpaperChange={handleWallpaperChange}
-        currentWallpaper={currentWallpaper}
       />
 
       {/* Background decorations */}

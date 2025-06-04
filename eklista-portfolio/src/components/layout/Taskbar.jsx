@@ -5,10 +5,8 @@ import {
   Wifi, 
   Battery, 
   Volume2,
-  Settings,
   User,
-  MessageSquare,
-  Image
+  MessageSquare
 } from 'lucide-react';
 
 const Taskbar = ({ 
@@ -17,32 +15,16 @@ const Taskbar = ({
   onChatToggle, 
   isChatOpen = false,
   showNotifications = false,
-  onNotificationsToggle,
-  onWallpaperChange,
-  currentWallpaper = 'wallpaper.jpg' 
+  onNotificationsToggle
 }) => {
   const [time, setTime] = useState(new Date());
   const [showStartMenu, setShowStartMenu] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [batteryLevel] = useState(85);
-
-  const wallpapers = [
-    { id: 'wallpaper.jpg', name: 'Original', preview: '/wallpaper.jpg' },
-    { id: 'wallpaper1.jpg', name: 'Wallpaper 1', preview: '/wallpaper1.jpg' },
-    { id: 'wallpaper2.jpg', name: 'Wallpaper 2', preview: '/wallpaper2.jpg' }
-  ];
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const handleWallpaperChange = (wallpaperPath) => {
-    console.log('Changing wallpaper to:', wallpaperPath);
-    console.log('onWallpaperChange function:', onWallpaperChange);
-    onWallpaperChange && onWallpaperChange(wallpaperPath);
-    setShowSettings(false);
-  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
@@ -63,20 +45,6 @@ const Taskbar = ({
             whileTap={{ scale: 0.95 }}
           >
             <div className="text-primary font-bold text-sm">EK</div>
-          </motion.button>
-
-          {/* Separator */}
-          <div className="w-px h-8 bg-border-primary hidden md:block"></div>
-
-          {/* Settings Button */}
-          <motion.button
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-10 h-10 rounded-xl bg-transparent hover:bg-hover-overlay flex items-center justify-center transition-all duration-200"
-            whileHover={{ scale: 1.1, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            title="Configuración"
-          >
-            <Settings size={18} className="text-muted hover:text-accent transition-colors" />
           </motion.button>
 
           {/* Separator */}
@@ -178,72 +146,6 @@ const Taskbar = ({
         </div>
       </motion.div>
 
-      {/* Settings Menu */}
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div
-            className="absolute bottom-16 left-4 md:left-20 w-80 bg-secondary/95 backdrop-blur-xl rounded-2xl border border-primary shadow-large overflow-hidden"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.2 }}
-          >
-            {/* Header */}
-            <div className="p-4 border-b border-primary">
-              <div className="flex items-center space-x-3">
-                <Settings size={20} className="text-accent-primary" />
-                <div>
-                  <div className="font-poppins font-bold text-primary">Configuración</div>
-                  <div className="text-xs text-muted">Personaliza tu experiencia</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Wallpaper Selection */}
-            <div className="p-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <Image size={16} className="text-accent-primary" />
-                <h3 className="font-poppins font-semibold text-primary">Fondo de Pantalla</h3>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                {wallpapers.map((wallpaper) => (
-                  <motion.button
-                    key={wallpaper.id}
-                    onClick={() => handleWallpaperChange(wallpaper.id)}
-                    className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                      currentWallpaper === wallpaper.id 
-                        ? 'border-accent-primary shadow-accent' 
-                        : 'border-primary hover:border-secondary'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <img 
-                      src={wallpaper.preview} 
-                      alt={wallpaper.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {currentWallpaper === wallpaper.id && (
-                      <div className="absolute inset-0 bg-accent-primary/20 flex items-center justify-center">
-                        <div className="w-4 h-4 bg-accent-primary rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-primary rounded-full"></div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="absolute bottom-1 left-1 right-1">
-                      <div className="bg-black/60 backdrop-blur-sm rounded px-2 py-1">
-                        <span className="text-white text-xs font-medium">{wallpaper.name}</span>
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Start Menu */}
       <AnimatePresence>
         {showStartMenu && (
@@ -273,7 +175,7 @@ const Taskbar = ({
                 {[
                   { icon: User, label: 'Perfil', color: 'from-blue-500 to-cyan-500' },
                   { icon: Terminal, label: 'Terminal', color: 'from-gray-500 to-gray-700' },
-                  { icon: Settings, label: 'Config', color: 'from-purple-500 to-pink-500' }
+                  { icon: MessageSquare, label: 'Chat', color: 'from-purple-500 to-pink-500' }
                 ].map((item, index) => (
                   <motion.button
                     key={item.label}
@@ -324,13 +226,12 @@ const Taskbar = ({
       </AnimatePresence>
 
       {/* Overlay para cerrar menús */}
-      {(showStartMenu || showNotifications || showSettings) && (
+      {(showStartMenu || showNotifications) && (
         <div 
           className="fixed inset-0 z-40" 
           onClick={(e) => {
             e.stopPropagation();
             setShowStartMenu(false);
-            setShowSettings(false);
             // Solo cerrar notificaciones si no viene de onNotificationsToggle
             if (showNotifications && onNotificationsToggle) {
               onNotificationsToggle();
