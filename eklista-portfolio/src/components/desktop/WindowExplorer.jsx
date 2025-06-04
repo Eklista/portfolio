@@ -27,6 +27,7 @@ const WindowExplorer = ({
   onMaximize,
   onBringToFront 
 }) => {
+  // CORREGIDO: Estado de navegación inicializado correctamente
   const [currentPath, setCurrentPath] = useState([windowProp.id]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [windowDimensions, setWindowDimensions] = useState(null);
@@ -72,7 +73,6 @@ const WindowExplorer = ({
 
   // Función para obtener dimensiones maximizadas
   const getMaximizedDimensions = () => {
-    // Verificación de seguridad
     if (typeof globalThis === 'undefined' || !globalThis.innerWidth) {
       return {
         width: 800,
@@ -112,53 +112,131 @@ const WindowExplorer = ({
 
   if (isMinimized || !windowDimensions) return null;
 
-  // Obtener contenido actual basado en la ruta
+  // CORREGIDO: Función mejorada para obtener contenido actual
   const getCurrentContent = () => {
-    let current = explorerStructure[currentPath[0]];
-    
-    for (let i = 1; i < currentPath.length; i++) {
-      current = current.children[currentPath[i]];
+    try {
+      let current = explorerStructure[currentPath[0]];
+      
+      if (!current) {
+        console.warn(`No se encontró contenido para la ruta raíz: ${currentPath[0]}`);
+        return null;
+      }
+      
+      // Navegar por el path completo
+      for (let i = 1; i < currentPath.length; i++) {
+        const pathSegment = currentPath[i];
+        
+        // Verificar si existe children y es un objeto
+        if (current.children && typeof current.children === 'object' && current.children[pathSegment]) {
+          current = current.children[pathSegment];
+        } else {
+          console.warn(`No se encontró el segmento de ruta: ${pathSegment} en:`, current);
+          // Si no encontramos el segmento, volver al último válido
+          setCurrentPath(prevPath => prevPath.slice(0, i));
+          return current;
+        }
+      }
+      
+      return current;
+    } catch (error) {
+      console.error('Error al obtener contenido actual:', error);
+      // En caso de error, volver a la raíz
+      setCurrentPath([windowProp.id]);
+      return explorerStructure[windowProp.id];
     }
-    
-    return current;
   };
 
-  // Obtener proyectos si estamos en una carpeta de proyectos
+  // CORREGIDO: Función mejorada para obtener proyectos
   const getCurrentProjects = () => {
     const current = getCurrentContent();
-    if (typeof current.children === 'string') {
-      return projectsData[current.children] || [];
+    
+    if (!current) return null;
+    
+    // Si children es un string, es una referencia a projectsData
+    if (current.children && typeof current.children === 'string') {
+      const projects = projectsData[current.children];
+      if (!projects) {
+        console.warn(`No se encontraron proyectos para la referencia: ${current.children}`);
+        return [];
+      }
+      return projects;
     }
+    
     return null;
   };
 
-  // Navegación
+  // CORREGIDO: Navegación con validaciones mejoradas
   const navigateTo = (pathSegment) => {
-    setCurrentPath([...currentPath, pathSegment]);
-  };
-
-  const navigateBack = () => {
-    if (currentPath.length > 1) {
-      setCurrentPath(currentPath.slice(0, -1));
+    const current = getCurrentContent();
+    
+    if (!current) {
+      console.warn('No hay contenido actual para navegar');
+      return;
+    }
+    
+    // Verificar que el segmento existe
+    if (current.children && typeof current.children === 'object' && current.children[pathSegment]) {
+      setCurrentPath(prevPath => {
+        const newPath = [...prevPath, pathSegment];
+        console.log('Navegando a:', newPath);
+        return newPath;
+      });
+    } else {
+      console.warn(`Segmento de navegación no válido: ${pathSegment}`);
     }
   };
 
-  const navigateHome = () => {
-    setCurrentPath([windowProp.id]);
+  // CORREGIDO: Navegación hacia atrás con validación
+  const navigateBack = () => {
+    if (currentPath.length > 1) {
+      setCurrentPath(prevPath => {
+        const newPath = prevPath.slice(0, -1);
+        console.log('Navegando hacia atrás a:', newPath);
+        return newPath;
+      });
+    }
   };
 
-  // Generar breadcrumbs
+  // CORREGIDO: Navegación al inicio
+  const navigateHome = () => {
+    setCurrentPath([windowProp.id]);
+    console.log('Navegando al inicio:', [windowProp.id]);
+  };
+
+  // CORREGIDO: Generar breadcrumbs con manejo de errores
   const getBreadcrumbs = () => {
     const breadcrumbs = [];
-    let current = explorerStructure[currentPath[0]];
-    breadcrumbs.push({ name: current.name, path: [currentPath[0]] });
-
-    for (let i = 1; i < currentPath.length; i++) {
-      current = current.children[currentPath[i]];
+    
+    try {
+      let current = explorerStructure[currentPath[0]];
+      
+      if (!current) {
+        return [{ name: 'Error', path: [windowProp.id] }];
+      }
+      
       breadcrumbs.push({ 
         name: current.name, 
-        path: currentPath.slice(0, i + 1) 
+        path: [currentPath[0]] 
       });
+
+      for (let i = 1; i < currentPath.length; i++) {
+        const pathSegment = currentPath[i];
+        
+        if (current.children && typeof current.children === 'object' && current.children[pathSegment]) {
+          current = current.children[pathSegment];
+          breadcrumbs.push({ 
+            name: current.name, 
+            path: currentPath.slice(0, i + 1) 
+          });
+        } else {
+          // Si encontramos un segmento inválido, truncar aquí
+          console.warn(`Breadcrumb inválido en: ${pathSegment}`);
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('Error al generar breadcrumbs:', error);
+      return [{ name: explorerStructure[windowProp.id]?.name || 'Error', path: [windowProp.id] }];
     }
 
     return breadcrumbs;
@@ -167,6 +245,14 @@ const WindowExplorer = ({
   const currentContent = getCurrentContent();
   const currentProjects = getCurrentProjects();
   const breadcrumbs = getBreadcrumbs();
+
+  // Función para navegar via breadcrumb - CORREGIDA
+  const navigateToBreadcrumb = (targetPath) => {
+    if (Array.isArray(targetPath) && targetPath.length > 0) {
+      setCurrentPath([...targetPath]);
+      console.log('Navegando via breadcrumb a:', targetPath);
+    }
+  };
 
   // Dimensiones actuales de la ventana
   const getCurrentWindowSize = () => {
@@ -178,7 +264,6 @@ const WindowExplorer = ({
 
   // Constraints para drag
   const getDragConstraints = () => {
-    // Verificación de seguridad
     if (typeof globalThis === 'undefined' || !globalThis.innerWidth) {
       return { left: 0, right: 0, top: 0, bottom: 0 };
     }
@@ -203,6 +288,24 @@ const WindowExplorer = ({
     setIsMaximized(!isMaximized);
     onMaximize && onMaximize(windowProp.windowId);
   };
+
+  // Si no hay contenido actual, mostrar error
+  if (!currentContent) {
+    return (
+      <motion.div className="absolute bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20">
+        <div className="p-8 text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Error de Navegación</h2>
+          <p className="text-gray-600 mb-4">No se pudo cargar el contenido solicitado.</p>
+          <button 
+            onClick={() => setCurrentPath([windowProp.id])}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <>
@@ -261,13 +364,15 @@ const WindowExplorer = ({
               <currentContent.icon size={windowDimensions.isMobile ? 14 : 18} className="text-white" />
             </div>
             
-            {/* Breadcrumbs */}
+            {/* Breadcrumbs - CORREGIDOS */}
             <div className="flex items-center space-x-1 text-sm min-w-0 overflow-hidden">
               {breadcrumbs.map((crumb, index) => (
                 <div key={index} className="flex items-center space-x-1 min-w-0">
                   <button
-                    onClick={() => setCurrentPath(crumb.path)}
-                    className={`text-gray-700 hover:text-blue-600 transition-colors font-medium truncate ${windowDimensions.isMobile ? 'text-xs' : 'text-sm'}`}
+                    onClick={() => navigateToBreadcrumb(crumb.path)}
+                    className={`text-gray-700 hover:text-blue-600 transition-colors font-medium truncate ${windowDimensions.isMobile ? 'text-xs' : 'text-sm'} ${
+                      index === breadcrumbs.length - 1 ? 'text-blue-600 font-semibold' : ''
+                    }`}
                   >
                     {crumb.name}
                   </button>
@@ -317,6 +422,13 @@ const WindowExplorer = ({
           <div className={`${windowDimensions.isMobile ? 'px-4 py-3' : 'px-6 py-4'} border-b border-gray-200/50 bg-gray-50/50`}>
             <h2 className={`font-bold text-gray-800 ${windowDimensions.isMobile ? 'text-base' : 'text-lg'}`}>{currentContent.name}</h2>
             <p className={`text-gray-600 ${windowDimensions.isMobile ? 'text-xs' : 'text-sm'} mt-1`}>{currentContent.description}</p>
+            
+            {/* Debug info - solo en desarrollo */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-2 text-xs text-gray-500">
+                Path actual: {JSON.stringify(currentPath)}
+              </div>
+            )}
           </div>
 
           {/* Main Content Area */}
@@ -350,7 +462,7 @@ const WindowExplorer = ({
             )}
 
             {/* Si hay proyectos, mostrarlos */}
-            {currentProjects && (
+            {currentProjects && currentProjects.length > 0 && (
               <div className={`grid ${windowDimensions.isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4`}>
                 {currentProjects.map((project, index) => {
                   const IconComponent = project.icon;
@@ -444,7 +556,7 @@ const WindowExplorer = ({
             {/* Empty State */}
             {!currentContent.children && !currentProjects && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className={`${windowDimensions.isMobile ? 'w-12 h-12' : 'w-16 h-16'} bg-gray-100 rounded-full flex items-center justify-center mb-4`}>
+                <div className={`${windowDimensions.isMobile ? 'w-12 h-12' : 'w-16 h-16'} bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4`}>
                   <FolderIcon size={windowDimensions.isMobile ? 20 : 24} className="text-gray-400" />
                 </div>
                 <h3 className={`text-gray-600 font-medium ${windowDimensions.isMobile ? 'text-sm' : 'text-base'} mb-2`}>Carpeta vacía</h3>
