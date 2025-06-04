@@ -4,7 +4,7 @@
 export { default as Taskbar } from './layout/Taskbar';
 
 // ===== DESKTOP COMPONENTS =====
-export { default as DesktopOS } from './desktop/DesktopOS';
+export { default as DesktopOS } from './desktop/DesktopOs';
 export { default as Folder } from './desktop/Folder';
 export { default as FolderWindow } from './desktop/FolderWindow';
 
