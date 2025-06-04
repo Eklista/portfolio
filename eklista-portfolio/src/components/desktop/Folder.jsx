@@ -68,13 +68,13 @@ const Folder = ({ folder, index, onClick, isMobileLarge = false }) => {
         </div>
       </div>
       
-      {/* Folder Label */}
+      {/* Folder Label - CORREGIDO: Eliminados conflictos CSS */}
       <div className={`text-center ${
-        isMobileLarge ? 'max-w-24' : 'max-w-20 lg:max-w-20 max-w-16'
+        isMobileLarge ? 'max-w-24' : 'max-w-20 lg:max-w-20'
       }`}>
         <div className={`bg-black/60 backdrop-blur-sm ${
-          isMobileLarge ? 'px-4 py-2' : 'px-3 py-1.5 lg:px-3 lg:py-1.5 px-2 py-1'
-        } rounded-lg lg:rounded-lg rounded-md`}>
+          isMobileLarge ? 'px-4 py-2 rounded-lg' : 'px-3 py-1.5 lg:px-3 lg:py-1.5 rounded-lg'
+        }`}>
           <span className={`text-white ${
             isMobileLarge ? 'text-sm' : 'text-xs'
           } font-medium leading-tight drop-shadow-lg`}>
