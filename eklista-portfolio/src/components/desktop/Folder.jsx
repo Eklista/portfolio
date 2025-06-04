@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const Folder = ({ folder, index, onDoubleClick, isMobileLarge = false }) => {
+const Folder = ({ folder, index, onClick, isMobileLarge = false }) => {
   return (
     <motion.div
       className="cursor-pointer group flex flex-col items-center"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      onDoubleClick={() => onDoubleClick(folder)}
+      onClick={() => onClick(folder)}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5 + index * 0.1, duration: 0.6 }}

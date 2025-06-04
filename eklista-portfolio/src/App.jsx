@@ -1,7 +1,8 @@
 import React from 'react';
-import { DesktopOS, QuotePage } from './components';
+import { QuotePage } from './components';
 import { ChatProvider } from './context/ChatContext';
 import { useChatContext } from './context/ChatContext';
+import LoadingScreen from './components/ui/LoadingScreen';
 
 // Componente interno que usa el contexto
 const AppContent = () => {
@@ -12,8 +13,8 @@ const AppContent = () => {
     return <QuotePage />;
   }
   
-  // Página principal con el nuevo DesktopOS
-  return <DesktopOS />;
+  // Página principal con LoadingScreen que incluye DesktopOS
+  return <LoadingScreen />;
 };
 
 function App() {

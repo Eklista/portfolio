@@ -16,7 +16,7 @@ import { Folder, Taskbar } from '..';
 import ModernChat from '../chat/ModernChat';
 import WindowExplorer from './WindowExplorer';
 import WindowInfo from './WindowInfo';
-import WindowContact from './WindowContact'; // NUEVO IMPORT
+import WindowContact from './WindowContact';
 import { explorerStructure } from '../../data/projects';
 
 const DesktopOS = () => {
@@ -73,77 +73,6 @@ const DesktopOS = () => {
         title: 'Información de Contacto',
         description: 'Formas de contactarme para tu próximo proyecto'
       }
-    },
-    // Carpetas adicionales para completar el grid
-    {
-      id: 'certificaciones',
-      name: 'Certificaciones',
-      icon: Award,
-      color: 'from-yellow-500 to-orange-500',
-      category: 'info',
-      content: {
-        title: 'Certificaciones y Logros',
-        description: 'Mis credenciales y reconocimientos profesionales',
-        sections: [
-          {
-            title: 'Certificaciones Técnicas',
-            description: 'Credenciales en las últimas tecnologías',
-            content: [
-              '🏆 React Advanced Certification - Meta (2024)',
-              '🏆 AWS Solutions Architect - Amazon (2023)',
-              '🏆 Google UX Design Certificate (2023)',
-              '🏆 Advanced TypeScript - Microsoft (2024)',
-              '🏆 Next.js Expert Certification (2024)'
-            ]
-          },
-          {
-            title: 'Reconocimientos',
-            description: 'Premios y menciones recibidas',
-            content: [
-              '🥇 Mejor Portfolio Digital - Awwwards (2024)',
-              '🥇 Proyecto del Año - Guatemala Tech Awards (2023)',
-              '🥈 Innovación en UX - Design Awards GT (2024)',
-              '⭐ 5.0 estrellas promedio en testimonios de clientes',
-              '📈 100% de proyectos entregados a tiempo'
-            ]
-          }
-        ]
-      }
-    },
-    {
-      id: 'recursos',
-      name: 'Recursos',
-      icon: Monitor,
-      color: 'from-teal-500 to-cyan-500',
-      category: 'info',
-      content: {
-        title: 'Recursos y Herramientas',
-        description: 'Tools y recursos que uso en mis proyectos',
-        sections: [
-          {
-            title: 'Design Tools',
-            description: 'Herramientas de diseño que domino',
-            content: [
-              '🎨 Figma - Diseño de interfaces y prototipos',
-              '🎨 Adobe Creative Suite - Diseño gráfico completo',
-              '🎨 Sketch - Diseño de productos digitales',
-              '🎨 InVision - Prototipado y colaboración',
-              '🎨 Principle - Animaciones de UI'
-            ]
-          },
-          {
-            title: 'Development Stack',
-            description: 'Tecnologías de desarrollo actuales',
-            content: [
-              '⚡ Frontend: React, Next.js, TypeScript, Tailwind',
-              '⚡ Backend: Node.js, Express, MongoDB, PostgreSQL',
-              '⚡ Tools: Git, Docker, AWS, Vercel, Figma',
-              '⚡ Testing: Jest, Cypress, Testing Library',
-              '⚡ CMS: WordPress, Strapi, Contentful'
-            ]
-          }
-        ]
-      }
     }
   ];
 
@@ -156,7 +85,7 @@ const DesktopOS = () => {
           x: 150 + (openWindows.length % 3) * 60, 
           y: 100 + (openWindows.length % 3) * 60 
         },
-        size: { width: 900, height: 600 }, // Ventanas más grandes
+        size: { width: 900, height: 600 },
         originalSize: { width: 900, height: 600 },
         originalPosition: {
           x: 150 + (openWindows.length % 3) * 60, 
@@ -267,50 +196,52 @@ const DesktopOS = () => {
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
 
-      {/* Title Section */}
-      <div className="absolute top-12 left-8 z-40">
-        <motion.h1 
-          className="text-5xl md:text-7xl font-black text-white tracking-tight font-poppins"
-          style={{ 
-            letterSpacing: '-0.02em',
-            textShadow: '0 0 40px rgba(255,255,255,0.3)'
-          }}
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          EKLISTA
-        </motion.h1>
-        <motion.p 
-          className="text-white/80 text-lg md:text-xl font-light mt-2 ml-1 font-inter"
-          style={{ textShadow: '0 0 20px rgba(255,255,255,0.2)' }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          Creative Operating System
-        </motion.p>
-      </div>
-
       {/* Main Content Area */}
-      <div className="absolute inset-0 pt-44 md:pt-40 pb-20 px-8 md:px-12">
+      <div className="absolute inset-0 pt-20 pb-20 px-8 md:px-12">
         {/* Desktop Layout */}
         <div className="hidden lg:block h-full">
           <div className="w-auto">
             <motion.div 
-              className="grid grid-cols-3 gap-8 p-8 w-fit"
+              className="p-8 w-fit space-y-6"
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              {folders.map((folder, index) => (
+              {/* Portfolio - Primera fila, alineado a la izquierda */}
+              <div className="flex justify-start">
                 <Folder
-                  key={folder.id}
-                  folder={folder}
-                  index={index}
-                  onDoubleClick={openWindow}
+                  key={folders[0].id}
+                  folder={folders[0]}
+                  index={0}
+                  onClick={openWindow}
                 />
-              ))}
+              </div>
+              
+              {/* Servicios - Segunda fila, alineado a la izquierda */}
+              <div className="flex justify-start">
+                <Folder
+                  key={folders[1].id}
+                  folder={folders[1]}
+                  index={1}
+                  onClick={openWindow}
+                />
+              </div>
+              
+              {/* Sobre Mí y Contacto - Tercera fila, lado a lado */}
+              <div className="flex justify-start space-x-8">
+                <Folder
+                  key={folders[2].id}
+                  folder={folders[2]}
+                  index={2}
+                  onClick={openWindow}
+                />
+                <Folder
+                  key={folders[3].id}
+                  folder={folders[3]}
+                  index={3}
+                  onClick={openWindow}
+                />
+              </div>
             </motion.div>
           </div>
         </div>
@@ -318,7 +249,7 @@ const DesktopOS = () => {
         {/* Mobile/Tablet Layout */}
         <div className="lg:hidden flex flex-col h-full">
           <motion.div 
-            className="grid grid-cols-2 sm:grid-cols-3 gap-10 px-8 flex-1 content-start pb-4"
+            className="grid grid-cols-2 gap-10 px-8 flex-1 content-start pb-4"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -328,7 +259,7 @@ const DesktopOS = () => {
                 key={folder.id}
                 folder={folder}
                 index={index}
-                onDoubleClick={openWindow}
+                onClick={openWindow}
                 isMobileLarge={true}
               />
             ))}
