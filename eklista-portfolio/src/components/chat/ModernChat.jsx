@@ -1,3 +1,4 @@
+// src/components/chat/ModernChat.jsx - ACTUALIZADO CON GROQ AI
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -14,9 +15,12 @@ import {
   Lightbulb,
   Code,
   Palette,
-  Calculator
+  Calculator,
+  Zap,
+  AlertCircle
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
+import chatAI from '../../services/groqChatAI'; // ✅ NUEVO IMPORT
 
 const ModernChat = ({ 
   isOpen = false, 
@@ -24,108 +28,38 @@ const ModernChat = ({
   onMinimize, 
   isMinimized = false,
   isMobile = false,
-  onOpenQuote // Nueva prop para abrir cotizador
+  onOpenQuote
 }) => {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentInput, setCurrentInput] = useState('');
+  const [aiStatus, setAiStatus] = useState('checking'); // checking, available, fallback
   const messagesEndRef = useRef(null);
   const [showQuickActions, setShowQuickActions] = useState(true);
 
-  // Respuestas predefinidas del bot
-  const botResponses = {
-    'servicios': `¡Perfecto! Ofrezco tres servicios principales:
+  // ✅ VERIFICAR ESTADO DE GROQ AL INICIALIZAR
+  useEffect(() => {
+    const checkAIStatus = async () => {
+      setAiStatus('checking');
+      
+      // Dar tiempo a que Groq se inicialice
+      setTimeout(() => {
+        const isAvailable = chatAI.isAvailable();
+        setAiStatus(isAvailable ? 'available' : 'fallback');
+        
+        console.log('🤖 Estado del AI:', {
+          disponible: isAvailable,
+          stats: chatAI.getStats()
+        });
+      }, 1000);
+    };
 
-🎨 **Diseño Gráfico & Branding** - Desde Q500
-• Logos e identidad visual
-• Papelería corporativa  
-• Packaging y etiquetas
+    if (isOpen && messages.length === 0) {
+      checkAIStatus();
+    }
+  }, [isOpen]);
 
-💻 **Desarrollo Web** - Desde Q1,200
-• Sitios WordPress personalizados
-• Aplicaciones React/Next.js
-• E-commerce y tiendas online
-
-🎯 **UX/UI Design** - Desde Q800
-• Investigación de usuarios
-• Prototipos interactivos
-• Interfaces web y móvil
-
-¿Te interesa algún servicio en particular?`,
-
-    'precios': `Mis precios son muy competitivos para Guatemala:
-
-💰 **Diseño Gráfico**: Q500 - Q1,500
-💰 **Sitios WordPress**: Q1,200 - Q4,000  
-💰 **UX/UI Design**: Q800 - Q2,500
-💰 **Desarrollo Custom**: Q4,000+
-
-Los precios varían según la complejidad del proyecto. ¿Quieres una cotización personalizada?`,
-
-    'portfolio': `¡Te muestro algunos de mis trabajos recientes!
-
-🏆 **Proyectos destacados 2024:**
-• Banking App UI/UX - Interfaz moderna para fintech
-• E-commerce Platform - Tienda completa con pagos
-• Restaurant Website - Reservas y menú digital
-• Brand Identity Café - Identidad visual completa
-
-Para ver los detalles y mockups, haz doble clic en las carpetas del escritorio. ¿Hay algún tipo de proyecto que te llame más la atención?`,
-
-    'contacto': `¡Perfecto! Aquí tienes toda mi información:
-
-📧 **Email**: hello@eklista.com
-📱 **WhatsApp**: +502 1234-5678
-💼 **LinkedIn**: /in/eklista
-🐙 **GitHub**: @eklista
-📍 **Ubicación**: Guatemala City, GT
-
-Prefiero WhatsApp para una respuesta más rápida. ¿Cuál es la mejor forma de contactarte?`,
-
-    'cotizar': `¡Excelente! Te voy a abrir el cotizador personalizado.
-
-✨ **¿Qué incluye?**
-• Selección de tipo de proyecto
-• Características personalizables  
-• Servicios adicionales opcionales
-• Cotización instantánea
-
-El cotizador te tomará solo 2 minutos y tendrás un precio exacto al final. ¿Estás listo para empezar?
-
-*Abriendo cotizador...*`,
-
-    'hola': `¡Hola! 👋 Soy tu asistente virtual de EKLISTA.
-
-Estoy aquí para ayudarte con:
-• Información sobre mis servicios
-• Precios y cotizaciones
-• Ver mi portfolio de trabajos
-• Agendar una reunión
-
-¿En qué puedo ayudarte hoy?`,
-
-    'quien': `¡Hola! Soy Pablo Lacán, pero todos me conocen como **EKLISTA**.
-
-👨‍💻 **Diseñador gráfico y Web**
-🎨 **5+ años de experiencia**
-🚀 **50+ proyectos completados**
-🇬🇹 **Basado en Guatemala**
-
-Me especializo en crear experiencias digitales únicas que combinan diseño atractivo con funcionalidad robusta. Mi enfoque es siempre centrado en el usuario y en resultados que importen para tu negocio.
-
-¿Te gustaría saber más sobre algún servicio específico?`,
-
-    'default': `Interesante pregunta. Como tu asistente virtual, te puedo ayudar con:
-
-• **Servicios** - Qué ofrezco y cómo puedo ayudarte
-• **Precios** - Tarifas y cotizaciones personalizadas  
-• **Portfolio** - Trabajos recientes y casos de éxito
-• **Contacto** - Cómo podemos trabajar juntos
-
-También puedes explorar las carpetas del escritorio para ver ejemplos de mi trabajo. ¿Hay algo específico que te interese?`
-  };
-
-  // Mensajes iniciales
+  // Mensajes iniciales MEJORADOS
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const welcomeMessage = {
@@ -133,24 +67,31 @@ También puedes explorar las carpetas del escritorio para ver ejemplos de mi tra
         type: 'bot',
         content: `¡Hola! 👋 Soy tu **asistente virtual** de EKLISTA.
 
-Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encontrar la solución perfecta para tu proyecto.
+Estoy aquí para ayudarte con información sobre:
+• Mis servicios de diseño y desarrollo
+• Precios y cotizaciones personalizadas
+• Portfolio de proyectos completados
+• Cualquier duda sobre tu próximo proyecto
+
+${aiStatus === 'available' ? '🤖 **Chat inteligente activado** - Puedes hacerme cualquier pregunta específica.' : '💬 **Modo respuestas rápidas** - Te ayudo con las consultas más comunes.'}
 
 ¿En qué puedo ayudarte hoy?`,
-        timestamp: new Date()
+        timestamp: new Date(),
+        aiPowered: aiStatus === 'available'
       };
 
       setTimeout(() => {
         setMessages([welcomeMessage]);
-      }, 500);
+      }, 800);
     }
-  }, [isOpen]);
+  }, [isOpen, aiStatus]);
 
   // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Procesar mensaje del usuario
+  // ✅ NUEVA LÓGICA DE PROCESAMIENTO DE MENSAJES CON GROQ
   const handleSendMessage = async (content) => {
     const userMessage = {
       id: Date.now(),
@@ -163,63 +104,89 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
     setCurrentInput('');
     setIsTyping(true);
 
-    // Simular tiempo de respuesta
-    setTimeout(() => {
-      const response = getBotResponse(content);
+    try {
+      // ✅ USAR GROQ CHAT AI
+      const aiResponse = await chatAI.respond(content);
+      
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: response,
-        timestamp: new Date()
+        content: aiResponse.content,
+        timestamp: new Date(),
+        aiPowered: aiResponse.source === 'groq',
+        source: aiResponse.source // Para debugging
       };
 
-      setMessages(prev => [...prev, botMessage]);
-      setIsTyping(false);
+      // Tiempo de respuesta realista
+      const delay = aiResponse.source === 'groq' ? 1500 : 800;
+      
+      setTimeout(() => {
+        setMessages(prev => [...prev, botMessage]);
+        setIsTyping(false);
 
-      // Si es cotización, abrir ventana
-      if (content.toLowerCase().includes('cotiz') || content.toLowerCase().includes('presupuesto')) {
-        setTimeout(() => {
-          onOpenQuote && onOpenQuote();
-        }, 1000);
-      }
-    }, 800 + Math.random() * 1200);
+        // ✅ DETECTAR SI DEBE ABRIR COTIZADOR
+        if (content.toLowerCase().includes('cotiz') || 
+            content.toLowerCase().includes('presupuesto') ||
+            aiResponse.content.toLowerCase().includes('cotizador')) {
+          setTimeout(() => {
+            onOpenQuote && onOpenQuote();
+          }, 1000);
+        }
+      }, delay);
+
+    } catch (error) {
+      console.error('Error en chat AI:', error);
+      
+      // Mensaje de error amigable
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: `Disculpa, tuve un pequeño problema técnico. Pero no te preocupes, puedo ayudarte con:
+
+• **Servicios y precios** - Desarrollo web, UX/UI, diseño gráfico
+• **Portfolio** - Explora las carpetas del escritorio para ver mis trabajos
+• **Cotizaciones** - Usa el botón "Cotizar" para obtener un presupuesto
+• **Contacto** - hello@eklista.com o WhatsApp +502 1234-5678
+
+¿En qué más puedo ayudarte?`,
+        timestamp: new Date(),
+        aiPowered: false,
+        isError: true
+      };
+
+      setTimeout(() => {
+        setMessages(prev => [...prev, errorMessage]);
+        setIsTyping(false);
+      }, 1000);
+    }
   };
 
-  // Lógica de respuestas del bot
-  const getBotResponse = (input) => {
-    const normalizedInput = input.toLowerCase().trim();
-    
-    if (normalizedInput.includes('hola') || normalizedInput.includes('hello') || normalizedInput.includes('hi')) {
-      return botResponses.hola;
-    }
-    if (normalizedInput.includes('servicio') || normalizedInput.includes('qué ofreces') || normalizedInput.includes('que haces')) {
-      return botResponses.servicios;
-    }
-    if (normalizedInput.includes('precio') || normalizedInput.includes('costo') || normalizedInput.includes('cuanto')) {
-      return botResponses.precios;
-    }
-    if (normalizedInput.includes('portfolio') || normalizedInput.includes('trabajo') || normalizedInput.includes('proyecto')) {
-      return botResponses.portfolio;
-    }
-    if (normalizedInput.includes('contacto') || normalizedInput.includes('contactar') || normalizedInput.includes('email') || normalizedInput.includes('whatsapp')) {
-      return botResponses.contacto;
-    }
-    if (normalizedInput.includes('cotiz') || normalizedInput.includes('presupuesto') || normalizedInput.includes('quote')) {
-      return botResponses.cotizar;
-    }
-    if (normalizedInput.includes('quien') || normalizedInput.includes('eres') || normalizedInput.includes('about')) {
-      return botResponses.quien;
-    }
-    
-    return botResponses.default;
-  };
-
-  // Quick Actions simplificadas
+  // ✅ QUICK ACTIONS MEJORADAS
   const quickActions = [
-    { text: 'Servicios', value: '¿Qué servicios ofreces?', icon: Code, color: 'from-blue-500 to-cyan-500' },
-    { text: 'Precios', value: '¿Cuáles son tus precios?', icon: Sparkles, color: 'from-green-500 to-emerald-500' },
-    { text: 'Portfolio', value: 'Muéstrame tu portfolio', icon: Palette, color: 'from-purple-500 to-pink-500' },
-    { text: 'Cotizar', value: 'Quiero una cotización', icon: Calculator, color: 'from-orange-500 to-red-500' }
+    { 
+      text: 'Servicios', 
+      value: '¿Qué servicios ofreces y cuáles son sus precios?', 
+      icon: Code, 
+      color: 'from-blue-500 to-cyan-500' 
+    },
+    { 
+      text: 'Portfolio', 
+      value: 'Muéstrame tus mejores proyectos y casos de éxito', 
+      icon: Palette, 
+      color: 'from-purple-500 to-pink-500' 
+    },
+    { 
+      text: 'Cotizar', 
+      value: 'Quiero una cotización personalizada para mi proyecto', 
+      icon: Calculator, 
+      color: 'from-orange-500 to-red-500' 
+    },
+    { 
+      text: 'Contacto', 
+      value: 'Dame tu información de contacto', 
+      icon: MessageSquare, 
+      color: 'from-green-500 to-emerald-500' 
+    }
   ];
 
   // Cerrar con ESC
@@ -235,7 +202,7 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
 
   if (!isOpen) return null;
 
-  // Layout móvil - pantalla completa
+  // ✅ RENDER MÓVIL MEJORADO
   if (isMobile) {
     return (
       <motion.div
@@ -245,17 +212,29 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
         exit={{ opacity: 0, y: '100%' }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        {/* Header móvil */}
+        {/* Header móvil MEJORADO */}
         <div className="bg-secondary border-b border-primary px-4 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
               <Bot size={18} className="text-white" />
+              {/* ✅ INDICADOR DE ESTADO AI */}
+              {aiStatus === 'available' && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full flex items-center justify-center">
+                  <Zap size={8} className="text-white" />
+                </div>
+              )}
             </div>
             <div>
               <h2 className="font-poppins font-bold text-primary">EKLISTA Chat</h2>
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-xs text-muted">Online</span>
+                <div className={`w-2 h-2 rounded-full ${
+                  aiStatus === 'available' ? 'bg-green-400' : 
+                  aiStatus === 'checking' ? 'bg-yellow-400' : 'bg-blue-400'
+                }`}></div>
+                <span className="text-xs text-muted">
+                  {aiStatus === 'available' ? 'AI Inteligente' : 
+                   aiStatus === 'checking' ? 'Conectando...' : 'Respuestas Rápidas'}
+                </span>
               </div>
             </div>
           </div>
@@ -275,36 +254,46 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
                 key={message.id}
                 message={message}
                 showReactions={false}
+                aiPowered={message.aiPowered}
               />
             ))}
           </AnimatePresence>
 
+          {/* ✅ TYPING INDICATOR MEJORADO */}
           {isTyping && (
             <motion.div
               className="flex items-center space-x-3"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
                 <Bot size={14} className="text-white" />
+                {aiStatus === 'available' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full"></div>
+                )}
               </div>
               <div className="bg-primary border border-secondary rounded-2xl px-4 py-3">
-                <div className="flex space-x-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className="w-2 h-2 bg-accent-primary rounded-full"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [1, 0.5, 1]
-                      }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        delay: i * 0.2
-                      }}
-                    />
-                  ))}
+                <div className="flex items-center space-x-2">
+                  <div className="flex space-x-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 bg-accent-primary rounded-full"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [1, 0.5, 1]
+                        }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          delay: i * 0.2
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted">
+                    {aiStatus === 'available' ? 'AI pensando...' : 'Escribiendo...'}
+                  </span>
                 </div>
               </div>
             </motion.div>
@@ -313,14 +302,20 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input móvil CORREGIDO */}
+        {/* Input móvil */}
         <div className="border-t border-primary bg-secondary flex-shrink-0">
-          {/* Quick Actions */}
+          {/* Quick Actions MEJORADAS */}
           {showQuickActions && messages.length <= 1 && (
             <div className="p-4 border-b border-primary">
               <div className="flex items-center space-x-2 mb-3">
                 <Sparkles size={14} className="text-accent-primary" />
                 <span className="text-xs text-muted font-inter">Pregúntame sobre:</span>
+                {aiStatus === 'available' && (
+                  <div className="flex items-center space-x-1 bg-green-100 px-2 py-1 rounded-full">
+                    <Zap size={10} className="text-green-600" />
+                    <span className="text-xs text-green-600 font-medium">AI</span>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {quickActions.map((action) => {
@@ -355,12 +350,16 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      if (currentInput.trim()) {
+                      if (currentInput.trim() && !isTyping) {
                         handleSendMessage(currentInput.trim());
                       }
                     }
                   }}
-                  placeholder="Escribe tu mensaje..."
+                  placeholder={
+                    aiStatus === 'available' 
+                      ? "Pregúntame cualquier cosa específica..." 
+                      : "Escribe tu mensaje..."
+                  }
                   disabled={isTyping}
                   className="w-full bg-surface border-2 border-primary rounded-xl px-4 py-3 pr-12 text-secondary placeholder-muted focus:border-accent-primary focus:outline-none resize-none transition-all text-sm disabled:opacity-50 font-inter"
                   rows="1"
@@ -387,7 +386,7 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
               {/* Send Button */}
               <motion.button
                 onClick={() => {
-                  if (currentInput.trim()) {
+                  if (currentInput.trim() && !isTyping) {
                     handleSendMessage(currentInput.trim());
                   }
                 }}
@@ -401,18 +400,25 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
               </motion.button>
             </div>
 
-            {/* Status Info */}
+            {/* Status Info MEJORADO */}
             <div className="flex items-center justify-between mt-3 text-xs">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-muted font-inter">EKLISTA Chat Online</span>
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${
+                    aiStatus === 'available' ? 'bg-green-400' : 
+                    aiStatus === 'checking' ? 'bg-yellow-400' : 'bg-blue-400'
+                  }`}></div>
+                  <span className="text-muted font-inter">
+                    EKLISTA Chat {aiStatus === 'available' ? 'AI' : 'Online'}
+                  </span>
                 </div>
                 
                 {isTyping && (
                   <div className="flex items-center space-x-1">
                     <div className="w-1 h-1 bg-accent-primary rounded-full animate-pulse"></div>
-                    <span className="text-accent-primary font-inter">Escribiendo...</span>
+                    <span className="text-accent-primary font-inter">
+                      {aiStatus === 'available' ? 'AI escribiendo...' : 'Escribiendo...'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -423,7 +429,7 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
     );
   }
 
-  // Layout desktop - ventana flotante CORREGIDO
+  // ✅ RENDER DESKTOP/TABLET MEJORADO
   return (
     <motion.div
       className={`fixed bg-secondary/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-primary overflow-hidden z-50 flex flex-col ${
@@ -444,18 +450,30 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header desktop */}
+      {/* Header desktop MEJORADO */}
       <div className="bg-secondary border-b border-primary px-4 py-3 flex items-center justify-between flex-shrink-0">
         {/* Chat info */}
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
             <Bot size={16} className="text-white" />
+            {/* ✅ INDICADOR DE ESTADO AI */}
+            {aiStatus === 'available' && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full flex items-center justify-center">
+                <Zap size={6} className="text-white" />
+              </div>
+            )}
           </div>
           <div>
             <h3 className="font-poppins font-bold text-primary text-sm">EKLISTA Chat</h3>
             <div className="flex items-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-              <span className="text-xs text-muted">Asistente Virtual</span>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                aiStatus === 'available' ? 'bg-green-400' : 
+                aiStatus === 'checking' ? 'bg-yellow-400' : 'bg-blue-400'
+              }`}></div>
+              <span className="text-xs text-muted">
+                {aiStatus === 'available' ? 'AI Inteligente' : 
+                 aiStatus === 'checking' ? 'Conectando...' : 'Asistente Virtual'}
+              </span>
             </div>
           </div>
         </div>
@@ -496,36 +514,46 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
               key={message.id}
               message={message}
               showReactions={true}
+              aiPowered={message.aiPowered}
             />
           ))}
         </AnimatePresence>
 
+        {/* ✅ TYPING INDICATOR MEJORADO DESKTOP */}
         {isTyping && (
           <motion.div
             className="flex items-center space-x-3"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
               <Bot size={14} className="text-white" />
+              {aiStatus === 'available' && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full"></div>
+              )}
             </div>
             <div className="bg-primary border border-secondary rounded-2xl px-4 py-3">
-              <div className="flex space-x-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-2 h-2 bg-accent-primary rounded-full"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [1, 0.5, 1]
-                    }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      delay: i * 0.2
-                    }}
-                  />
-                ))}
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 bg-accent-primary rounded-full"
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [1, 0.5, 1]
+                      }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        delay: i * 0.2
+                      }}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-muted">
+                  {aiStatus === 'available' ? 'AI analizando...' : 'Escribiendo...'}
+                </span>
               </div>
             </div>
           </motion.div>
@@ -534,14 +562,20 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input desktop CORREGIDO */}
+      {/* Input desktop */}
       <div className="border-t border-primary bg-secondary/50 flex-shrink-0">
-        {/* Quick Actions */}
+        {/* Quick Actions MEJORADAS */}
         {showQuickActions && messages.length <= 1 && (
           <div className="p-3 border-b border-primary">
             <div className="flex items-center space-x-2 mb-3">
               <Sparkles size={14} className="text-accent-primary" />
               <span className="text-xs text-muted font-inter">Pregúntame sobre:</span>
+              {aiStatus === 'available' && (
+                <div className="flex items-center space-x-1 bg-green-100 px-2 py-1 rounded-full">
+                  <Zap size={8} className="text-green-600" />
+                  <span className="text-xs text-green-600 font-medium">AI</span>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               {quickActions.map((action) => {
@@ -576,12 +610,16 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    if (currentInput.trim()) {
+                    if (currentInput.trim() && !isTyping) {
                       handleSendMessage(currentInput.trim());
                     }
                   }
                 }}
-                placeholder="Pregúntame sobre mis servicios..."
+                placeholder={
+                  aiStatus === 'available' 
+                    ? "Pregúntame cualquier cosa específica sobre mis servicios..." 
+                    : "Pregúntame sobre mis servicios..."
+                }
                 disabled={isTyping}
                 className="w-full bg-surface border-2 border-primary rounded-xl px-4 py-3 pr-12 text-secondary placeholder-muted focus:border-accent-primary focus:outline-none resize-none transition-all text-sm disabled:opacity-50 font-inter"
                 rows="1"
@@ -608,7 +646,7 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
             {/* Send Button */}
             <motion.button
               onClick={() => {
-                if (currentInput.trim()) {
+                if (currentInput.trim() && !isTyping) {
                   handleSendMessage(currentInput.trim());
                 }
               }}
@@ -622,18 +660,25 @@ Estoy aquí para mostrarte mis servicios, resolver tus dudas y ayudarte a encont
             </motion.button>
           </div>
 
-          {/* Status Info */}
+          {/* Status Info MEJORADO */}
           <div className="flex items-center justify-between mt-3 text-xs">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-muted font-inter">EKLISTA Chat Online</span>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${
+                  aiStatus === 'available' ? 'bg-green-400' : 
+                  aiStatus === 'checking' ? 'bg-yellow-400' : 'bg-blue-400'
+                }`}></div>
+                <span className="text-muted font-inter">
+                  EKLISTA Chat {aiStatus === 'available' ? 'AI' : 'Online'}
+                </span>
               </div>
               
               {isTyping && (
                 <div className="flex items-center space-x-1">
                   <div className="w-1 h-1 bg-accent-primary rounded-full animate-pulse"></div>
-                  <span className="text-accent-primary font-inter">Escribiendo...</span>
+                  <span className="text-accent-primary font-inter">
+                    {aiStatus === 'available' ? 'AI escribiendo...' : 'Escribiendo...'}
+                  </span>
                 </div>
               )}
             </div>
