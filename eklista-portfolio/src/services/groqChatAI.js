@@ -42,163 +42,61 @@ class EklistaChatAI {
       experiencia: '5+ años, 50+ proyectos completados'
     };
 
-    return `Eres el asistente virtual de EKLISTA, un diseñador web y desarrollador guatemalteco especializado en crear experiencias digitales únicas.
+    return `Eres Pablo (EKLISTA), un diseñador web y desarrollador guatemalteco. Actúas como un consultor amigable que ayuda a los clientes a entender sus necesidades y encontrar la mejor solución.
 
-INFORMACIÓN DEL PORTFOLIO:
+INFORMACIÓN SOBRE TI:
 ${JSON.stringify(portfolioSummary, null, 2)}
 
-PERSONALIDAD Y TONO:
-- Profesional pero cercano y amigable
-- Entusiasta por la tecnología y el diseño
-- Responde en español guatemalteco
-- Usa emojis ocasionalmente para ser más expresivo
-- Enfócate en generar interés genuino en los servicios
+PERSONALIDAD:
+- Conversacional y consultivo, no robótico
+- Haces preguntas para entender mejor las necesidades del cliente
+- Educas al cliente sobre las opciones disponibles
+- Guatemalteco profesional pero cercano
+- Usas ejemplos específicos de tus proyectos cuando es relevante
 
-REGLAS IMPORTANTES:
-1. SIEMPRE menciona precios base cuando pregunten sobre costos
-2. Para cotizaciones exactas, SIEMPRE invita a usar el cotizador personalizado
-3. Si preguntan por proyectos específicos, menciona casos de éxito relevantes
-4. No inventes información - si no sabes algo, di que pueden contactar directamente
-5. Mantén respuestas concisas pero informativas (máximo 3-4 párrafos)
-6. Siempre termina con una pregunta o call-to-action
+FILOSOFÍA DE CONVERSACIÓN:
+1. ESCUCHA primero - haz preguntas para entender qué necesita el cliente
+2. EDUCA - explica las opciones y diferencias entre servicios
+3. RECOMIENDA - sugiere la mejor solución basada en sus necesidades
+4. GUÍA - lleva al cliente paso a paso hacia la decisión correcta
 
-EJEMPLOS DE RESPUESTAS ESPERADAS:
-- Pregunta sobre precios → Mencionar rango + invitar al cotizador
-- Pregunta sobre servicios → Explicar brevemente + mencionar tecnologías
-- Pregunta sobre experiencia → Mencionar proyectos + años de experiencia
-- Pregunta general → Respuesta útil + redireccionar a servicios relevantes`;
+REGLAS DE CONVERSACIÓN:
+- NO menciones el cotizador inmediatamente - primero entiende qué necesita
+- HAZ preguntas de seguimiento para clarificar necesidades
+- USA ejemplos de tus proyectos cuando sea relevante al caso del cliente
+- MENCIONA precios solo cuando el cliente los pregunte directamente
+- MANTÉN la conversación fluida y natural
+- TERMINA con preguntas que hagan avanzar la conversación
+
+EJEMPLOS DE FLOW CONVERSACIONAL:
+
+Cliente: "Necesito una página web"
+TÚ: "¡Perfecto! Me encanta ayudar con proyectos web. Para poder recomendarte la mejor solución, cuéntame un poco más: ¿es para tu negocio personal, una empresa, o qué tipo de proyecto tienes en mente?"
+
+Cliente: "¿Cuánto cuesta?"
+TÚ: "Los precios varían bastante según lo que necesites. Por ejemplo, un sitio básico de WordPress puede empezar desde Q1,200, pero una aplicación web custom puede ser Q4,000+. ¿Qué tipo de funcionalidades tienes en mente? ¿Es más informativo, necesitas ventas online, o algo más específico?"
+
+NUNCA respondas como FAQ - siempre mantén el tono conversacional y haz seguimiento.`;
   }
 
   // Respuestas rápidas para consultas comunes
   getQuickResponse(message) {
     const msg = message.toLowerCase().trim();
     
-    // Saludos
+    // Saludos - más conversacional
     if (msg.includes('hola') || msg.includes('hello') || msg.includes('hi') || msg === 'hey') {
       return {
         isQuick: true,
-        response: `¡Hola! 👋 Soy tu asistente virtual de EKLISTA.
+        response: `¡Hola! 👋 Soy Pablo, pero puedes decirme EKLISTA.
 
-Estoy aquí para ayudarte con:
-• Información sobre mis servicios de diseño y desarrollo
-• Precios y cotizaciones personalizadas  
-• Ver mi portfolio de trabajos
-• Resolver cualquier duda sobre tu próximo proyecto
+Me dedico al diseño web y desarrollo aquí en Guatemala. Me encanta ayudar a empresarios y emprendedores a crear sus proyectos digitales.
 
-¿En qué puedo ayudarte hoy?`
+¿En qué estás trabajando? ¿Tienes algún proyecto en mente o hay algo específico que te gustaría saber sobre lo que hago?`
       };
     }
 
-    // Precios específicos
-    if (msg.includes('precio') && msg.includes('wordpress')) {
-      return {
-        isQuick: true,
-        response: `Los sitios WordPress empiezan desde **${formatPrice(1200)}** e incluyen:
-
-✅ Diseño responsive y personalizado
-✅ Optimización SEO básica  
-✅ Panel de administración fácil de usar
-✅ Instalación y configuración completa
-
-El precio final depende de las funcionalidades específicas que necesites (tienda online, formularios avanzados, integraciones, etc.).
-
-¿Te gustaría usar nuestro **cotizador personalizado** para obtener un presupuesto exacto en 2 minutos?`
-      };
-    }
-
-    if (msg.includes('precio') && (msg.includes('ux') || msg.includes('ui') || msg.includes('diseño'))) {
-      return {
-        isQuick: true,
-        response: `Los proyectos de UX/UI Design empiezan desde **${formatPrice(800)}** e incluyen:
-
-🎨 Investigación de usuarios
-🎯 Wireframes y prototipos
-✨ Diseño de interfaz moderna
-📱 Versión móvil optimizada
-
-Para proyectos más complejos (design systems, testing de usabilidad) el precio puede aumentar según el alcance.
-
-¿Quieres que calculemos el costo exacto de tu proyecto con nuestro cotizador?`
-      };
-    }
-
-    // Servicios generales
-    if (msg.includes('servicio') || msg.includes('qué haces') || msg.includes('que ofreces')) {
-      return {
-        isQuick: true,
-        response: `Ofrezco tres servicios principales:
-
-💻 **Desarrollo Web** (desde ${formatPrice(1200)})
-• Sitios WordPress personalizados
-• Aplicaciones React/Next.js
-• E-commerce y tiendas online
-
-🎨 **UX/UI Design** (desde ${formatPrice(800)})  
-• Investigación de usuarios
-• Prototipos interactivos
-• Interfaces web y móvil
-
-🎯 **Diseño Gráfico** (desde ${formatPrice(500)})
-• Logos e identidad visual
-• Branding completo
-• Material publicitario
-
-¿Te interesa algún servicio en particular?`
-      };
-    }
-
-    // Portfolio/proyectos
-    if (msg.includes('portfolio') || msg.includes('trabajo') || msg.includes('proyecto')) {
-      return {
-        isQuick: true,
-        response: `¡Me encanta mostrar mi trabajo! 🚀 Algunos proyectos destacados:
-
-🏦 **Banking Web App** - Aplicación financiera completa para FinTech guatemalteca
-🛒 **E-commerce Platform** - Tienda online que aumentó ventas en +250%  
-🍽️ **Restaurant Website** - Sitio con reservas que incrementó bookings en +400%
-
-Para ver todos los detalles, mockups y casos de estudio, **haz doble clic en las carpetas del escritorio**. Ahí encontrarás mi portfolio completo organizado por categorías.
-
-¿Hay algún tipo de proyecto específico que te interese?`
-      };
-    }
-
-    // Contacto
-    if (msg.includes('contacto') || msg.includes('email') || msg.includes('whatsapp') || msg.includes('teléfono')) {
-      return {
-        isQuick: true,
-        response: `¡Perfecto! Aquí tienes toda mi información de contacto:
-
-📧 **Email**: hello@eklista.com  
-📱 **WhatsApp**: +502 1234-5678  
-💼 **LinkedIn**: /in/eklista  
-📍 **Ubicación**: Guatemala City, GT
-
-**Prefiero WhatsApp** para una respuesta más rápida, pero cualquier canal funciona perfecto.
-
-¿Tienes algún proyecto en mente que quieras discutir?`
-      };
-    }
-
-    // Cotización
-    if (msg.includes('cotiz') || msg.includes('presupuesto') || msg.includes('quote')) {
-      return {
-        isQuick: true,
-        response: `¡Excelente! 🎯 Tengo un **cotizador personalizado** que te dará un precio exacto en solo 2 minutos.
-
-**¿Qué incluye el cotizador?**
-✅ Selección de tipo de proyecto  
-✅ Características personalizables
-✅ Servicios adicionales opcionales
-✅ Precio final instant
-
-Solo necesitas responder unas preguntas sobre tu proyecto y tendrás una cotización detallada.
-
-¿Estás listo para empezar? Puedo abrirte el cotizador ahora mismo.`
-      };
-    }
-
-    return null; // No hay respuesta rápida disponible
+    // Solo dar respuestas rápidas muy específicas, el resto que vaya a AI
+    return null; // Dejar que AI maneje casi todo
   }
 
   // Clasificar el tipo de consulta para mejor contexto
@@ -290,17 +188,17 @@ Solo necesitas responder unas preguntas sobre tu proyecto y tendrás una cotizac
 
   addContextForIntent(intent, basePrompt) {
     const contextAdditions = {
-      pricing: `\nCONTEXTO ADICIONAL: El usuario está preguntando sobre precios. Siempre menciona los precios base y sugiere el cotizador personalizado para precios exactos.`,
+      pricing: `\n\nCONTEXTO: El usuario pregunta sobre precios. IMPORTANTE: NO menciones el cotizador inmediatamente. Primero pregunta qué tipo de proyecto tienen en mente, qué funcionalidades necesitan, o para qué negocio es. Da rangos de precios y explica por qué varían. Solo menciona el cotizador si insisten en un precio exacto.`,
       
-      services: `\nCONTEXTO ADICIONAL: El usuario quiere conocer los servicios. Explica brevemente cada servicio y menciona las tecnologías clave que usas.`,
+      services: `\n\nCONTEXTO: El usuario quiere conocer servicios. Pregunta específicamente qué tipo de proyecto tienen en mente o qué problema quieren resolver. No hagas una lista de servicios - conversa sobre qué necesita.`,
       
-      portfolio: `\nCONTEXTO ADICIONAL: El usuario está interesado en ver trabajos. Menciona proyectos específicos y sugiere explorar las carpetas del escritorio.`,
+      portfolio: `\n\nCONTEXTO: El usuario está interesado en trabajos anteriores. Pregunta qué tipo de proyectos les interesan más para poder mostrarles ejemplos relevantes.`,
       
-      contact: `\nCONTEXTO ADICIONAL: El usuario quiere información de contacto. Proporciona todos los medios y menciona preferencia por WhatsApp.`,
+      contact: `\n\nCONTEXTO: El usuario quiere información de contacto. Además de dar la info, pregunta si tienen algún proyecto específico en mente para poder ayudarles mejor.`,
       
-      quote: `\nCONTEXTO ADICIONAL: El usuario quiere una cotización. Explica el cotizador personalizado y ofrece abrirlo.`,
+      quote: `\n\nCONTEXTO: El usuario quiere cotización. ANTES de mencionar el cotizador, pregunta sobre su proyecto: ¿qué tipo de negocio?, ¿qué funcionalidades?, ¿tienen deadline?, etc. Solo después de 2-3 intercambios sugiere el cotizador.`,
       
-      general: ''
+      general: '\n\nCONTEXTO: Conversación general. Sé consultivo y haz preguntas para entender mejor qué necesita el cliente.'
     };
 
     return basePrompt + (contextAdditions[intent] || contextAdditions.general);

@@ -124,13 +124,14 @@ ${aiStatus === 'available' ? '🤖 **Chat inteligente activado** - Puedes hacerm
         setMessages(prev => [...prev, botMessage]);
         setIsTyping(false);
 
-        // ✅ DETECTAR SI DEBE ABRIR COTIZADOR
-        if (content.toLowerCase().includes('cotiz') || 
-            content.toLowerCase().includes('presupuesto') ||
-            aiResponse.content.toLowerCase().includes('cotizador')) {
+        // ✅ DETECTAR SI DEBE ABRIR COTIZADOR - MÁS INTELIGENTE
+        if ((content.toLowerCase().includes('cotizador') && 
+             (content.toLowerCase().includes('abrir') || content.toLowerCase().includes('empezar'))) ||
+            (aiResponse.content.toLowerCase().includes('abrirte el cotizador') || 
+             aiResponse.content.toLowerCase().includes('abrir el cotizador'))) {
           setTimeout(() => {
             onOpenQuote && onOpenQuote();
-          }, 1000);
+          }, 1500);
         }
       }, delay);
 
