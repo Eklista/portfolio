@@ -2,14 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Send, 
-  Paperclip, 
-  Smile, 
-  Mic, 
-  Square,
   Sparkles,
-  MessageSquare,
-  Zap,
-  Heart
+  Calculator,
+  Code,
+  Palette
 } from 'lucide-react';
 
 const ChatInput = ({ 
@@ -20,15 +16,14 @@ const ChatInput = ({
   showQuickActions = true 
 }) => {
   const [input, setInput] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
   const textareaRef = useRef(null);
 
   const quickActions = [
-    { text: 'Servicios', value: '¿Qué servicios ofreces?', icon: Zap, color: 'from-blue-500 to-cyan-500' },
+    { text: 'Servicios', value: '¿Qué servicios ofreces?', icon: Code, color: 'from-blue-500 to-cyan-500' },
     { text: 'Precios', value: '¿Cuáles son tus precios?', icon: Sparkles, color: 'from-green-500 to-emerald-500' },
-    { text: 'Portfolio', value: 'Muéstrame tu portfolio', icon: Heart, color: 'from-purple-500 to-pink-500' },
-    { text: 'Contacto', value: '¿Cómo puedo contactarte?', icon: MessageSquare, color: 'from-orange-500 to-red-500' }
+    { text: 'Portfolio', value: 'Muéstrame tu portfolio', icon: Palette, color: 'from-purple-500 to-pink-500' },
+    { text: 'Cotizar', value: 'Quiero una cotización', icon: Calculator, color: 'from-orange-500 to-red-500' }
   ];
 
   useEffect(() => {
@@ -71,11 +66,6 @@ const ChatInput = ({
     onSendMessage(value);
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    // TODO: Implementar grabación de voz
-  };
-
   return (
     <div className="border-t border-primary p-3 md:p-4 bg-secondary/50">
       {/* Quick Actions */}
@@ -109,18 +99,6 @@ const ChatInput = ({
 
       {/* Input Area */}
       <div className="flex items-end space-x-3">
-        {/* Additional Actions - Solo desktop */}
-        <div className="hidden md:flex flex-col space-y-2">
-          <motion.button
-            className="w-9 h-9 bg-surface hover:bg-primary border border-primary rounded-lg flex items-center justify-center transition-all duration-200"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="Adjuntar archivo"
-          >
-            <Paperclip size={16} className="text-muted hover:text-accent-primary" />
-          </motion.button>
-        </div>
-
         {/* Text Input */}
         <div className="flex-1 relative">
           <textarea
@@ -157,39 +135,17 @@ const ChatInput = ({
           )}
         </div>
 
-        {/* Voice/Send Button */}
-        <div className="flex space-x-2">
-          {/* Voice Recording - Solo desktop */}
-          <motion.button
-            onClick={toggleRecording}
-            className={`hidden md:flex w-9 h-9 rounded-lg items-center justify-center transition-all duration-200 ${
-              isRecording 
-                ? 'bg-red-500 hover:bg-red-600' 
-                : 'bg-surface hover:bg-primary border border-primary'
-            }`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title={isRecording ? "Detener grabación" : "Grabar mensaje de voz"}
-          >
-            {isRecording ? (
-              <Square size={16} className="text-white" />
-            ) : (
-              <Mic size={16} className="text-muted hover:text-accent-primary" />
-            )}
-          </motion.button>
-
-          {/* Send Button */}
-          <motion.button
-            onClick={handleSend}
-            disabled={!input.trim() || disabled || isTyping}
-            className="w-10 h-10 md:w-9 md:h-9 bg-accent-primary hover:bg-accent-secondary disabled:bg-border-primary rounded-lg flex items-center justify-center transition-all duration-200 disabled:cursor-not-allowed"
-            whileHover={{ scale: input.trim() && !disabled ? 1.05 : 1 }}
-            whileTap={{ scale: input.trim() && !disabled ? 0.95 : 1 }}
-            title="Enviar mensaje"
-          >
-            <Send size={16} className="text-primary" />
-          </motion.button>
-        </div>
+        {/* Send Button */}
+        <motion.button
+          onClick={handleSend}
+          disabled={!input.trim() || disabled || isTyping}
+          className="w-10 h-10 md:w-9 md:h-9 bg-accent-primary hover:bg-accent-secondary disabled:bg-border-primary rounded-lg flex items-center justify-center transition-all duration-200 disabled:cursor-not-allowed"
+          whileHover={{ scale: input.trim() && !disabled ? 1.05 : 1 }}
+          whileTap={{ scale: input.trim() && !disabled ? 0.95 : 1 }}
+          title="Enviar mensaje"
+        >
+          <Send size={16} className="text-primary" />
+        </motion.button>
       </div>
 
       {/* Status Info */}
@@ -197,7 +153,7 @@ const ChatInput = ({
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-muted font-inter">EKLISTA AI Online</span>
+            <span className="text-muted font-inter">EKLISTA Chat Online</span>
           </div>
           
           {isTyping && (

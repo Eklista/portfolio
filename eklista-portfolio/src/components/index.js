@@ -1,4 +1,4 @@
-// src/components/index.js - ACTUALIZADO con nuevos componentes
+// src/components/index.js - ACTUALIZADO con WindowQuote
 
 // ===== LAYOUT COMPONENTS =====
 export { default as Taskbar } from './layout/Taskbar';
@@ -10,6 +10,7 @@ export { default as FolderWindow } from './desktop/FolderWindow';    // LEGACY -
 export { default as WindowExplorer } from './desktop/WindowExplorer'; // NUEVO
 export { default as WindowInfo } from './desktop/WindowInfo';         // NUEVO
 export { default as WindowContact } from './desktop/WindowContact';   // NUEVO
+export { default as WindowQuote } from './desktop/WindowQuote';       // NUEVO
 
 // ===== CHAT COMPONENTS =====
 export { default as ModernChat } from './chat/ModernChat';

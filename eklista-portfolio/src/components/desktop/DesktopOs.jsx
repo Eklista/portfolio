@@ -10,13 +10,15 @@ import {
   Code,
   PenTool,
   Award,
-  Monitor
+  Monitor,
+  Calculator  // ✅ IMPORT AGREGADO
 } from 'lucide-react';
 import { Folder, Taskbar } from '..';
 import ModernChat from '../chat/ModernChat';
 import WindowExplorer from './WindowExplorer';
 import WindowInfo from './WindowInfo';
 import WindowContact from './WindowContact';
+import WindowQuote from './WindowQuote';
 import { explorerStructure } from '../../data/projects';
 
 const DesktopOS = () => {
@@ -37,7 +39,7 @@ const DesktopOS = () => {
 
   const isMobile = window.innerWidth < 1024;
 
-  // Estructura de carpetas del escritorio
+  // ✅ ESTRUCTURA DE CARPETAS ACTUALIZADA CON COTIZADOR
   const folders = [
     {
       id: 'portfolio',
@@ -62,6 +64,17 @@ const DesktopOS = () => {
       color: 'from-violet-500 to-purple-500',
       category: 'info',
       ...explorerStructure['sobre-mi']
+    },
+    {
+      id: 'cotizador',  // ✅ NUEVA CARPETA
+      name: 'Cotizador',
+      icon: Calculator,
+      color: 'from-orange-500 to-red-500',
+      category: 'quote',
+      content: {
+        title: 'Cotizador Personalizado',
+        description: 'Obtén tu cotización en minutos'
+      }
     },
     {
       id: 'contacto',
@@ -101,7 +114,8 @@ const DesktopOS = () => {
       const configs = {
         explorer: { width: Math.min(1200, screenWidth - 200), height: Math.min(800, screenHeight - 200) },
         contact: { width: Math.min(1000, screenWidth - 200), height: Math.min(700, screenHeight - 200) },
-        info: { width: Math.min(1000, screenWidth - 200), height: Math.min(750, screenHeight - 200) }
+        info: { width: Math.min(1000, screenWidth - 200), height: Math.min(750, screenHeight - 200) },
+        quote: { width: Math.min(1300, screenWidth - 120), height: Math.min(850, screenHeight - 100) }
       };
       
       const config = configs[category] || configs.explorer;
@@ -173,15 +187,59 @@ const DesktopOS = () => {
     }));
   };
 
+  // ✅ FUNCIÓN PARA ABRIR COTIZADOR (CORREGIDA)
+  const openQuoteWindow = () => {
+    const existingQuote = openWindows.find(w => w.category === 'quote');
+    
+    if (existingQuote) {
+      // Si ya existe, traerla al frente y desmininizar
+      setOpenWindows(openWindows.map(w => 
+        w.windowId === existingQuote.windowId 
+          ? { ...w, isMinimized: false, zIndex: Math.max(...openWindows.map(w => w.zIndex || 100)) + 1 }
+          : w
+      ));
+      return;
+    }
+
+    const initialDimensions = getInitialWindowDimensions('quote');
+    
+    const quoteWindow = {
+      id: 'quote-window',
+      name: 'Cotizador Personalizado',
+      icon: Calculator,
+      color: 'from-orange-500 to-red-500',
+      category: 'quote',
+      windowId: Date.now(),
+      position: initialDimensions.position,
+      size: { 
+        width: initialDimensions.width,
+        height: initialDimensions.height 
+      },
+      originalSize: { 
+        width: initialDimensions.width,
+        height: initialDimensions.height 
+      },
+      originalPosition: initialDimensions.position,
+      isMinimized: false,
+      isMaximized: false,
+      zIndex: 100 + openWindows.length,
+      content: {
+        title: 'Cotizador Personalizado',
+        description: 'Obtén tu cotización en minutos'
+      }
+    };
+    
+    setOpenWindows([...openWindows, quoteWindow]);
+  };
+
   const bringToFront = (windowId) => {
     const maxZ = Math.max(...openWindows.map(w => w.zIndex || 100));
     setOpenWindows(openWindows.map(w => 
       w.windowId === windowId ? { ...w, zIndex: maxZ + 1 } : w
     ));
   };
-  
+
   const renderWindow = (window) => {
-    // Separar la key del resto de props para evitar el warning
     const { windowId, ...windowProps } = window;
     
     const commonProps = {
@@ -198,6 +256,8 @@ const DesktopOS = () => {
         return <WindowExplorer key={windowId} {...commonProps} />;
       case 'contact':
         return <WindowContact key={windowId} {...commonProps} />;
+      case 'quote':
+        return <WindowQuote key={windowId} {...commonProps} />;
       default:
         return <WindowInfo key={windowId} {...commonProps} />;
     }
@@ -217,7 +277,7 @@ const DesktopOS = () => {
 
       {/* Main Content Area */}
       <div className="absolute inset-0 pt-20 pb-20 px-8 md:px-12">
-        {/* Desktop Layout */}
+        {/* Desktop Layout - ✅ ACTUALIZADO CON 5 CARPETAS */}
         <div className="hidden lg:block h-full">
           <div className="w-auto">
             <motion.div 
@@ -226,7 +286,7 @@ const DesktopOS = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              {/* Portfolio - Primera fila, alineado a la izquierda */}
+              {/* Portfolio - Primera fila */}
               <div className="flex justify-start">
                 <Folder
                   key={folders[0].id}
@@ -236,7 +296,7 @@ const DesktopOS = () => {
                 />
               </div>
               
-              {/* Servicios - Segunda fila, alineado a la izquierda */}
+              {/* Servicios - Segunda fila */}
               <div className="flex justify-start">
                 <Folder
                   key={folders[1].id}
@@ -246,7 +306,7 @@ const DesktopOS = () => {
                 />
               </div>
               
-              {/* Sobre Mí - Tercera fila, alineado a la izquierda */}
+              {/* Sobre Mí - Tercera fila */}
               <div className="flex justify-start">
                 <Folder
                   key={folders[2].id}
@@ -256,7 +316,7 @@ const DesktopOS = () => {
                 />
               </div>
               
-              {/* Contacto - Cuarta fila, alineado a la izquierda */}
+              {/* ✅ COTIZADOR - Cuarta fila */}
               <div className="flex justify-start">
                 <Folder
                   key={folders[3].id}
@@ -265,14 +325,24 @@ const DesktopOS = () => {
                   onClick={openWindow}
                 />
               </div>
+              
+              {/* Contacto - Quinta fila */}
+              <div className="flex justify-start">
+                <Folder
+                  key={folders[4].id}
+                  folder={folders[4]}
+                  index={4}
+                  onClick={openWindow}
+                />
+              </div>
             </motion.div>
           </div>
         </div>
 
-        {/* Mobile/Tablet Layout */}
+        {/* Mobile/Tablet Layout - ✅ ACTUALIZADO */}
         <div className="lg:hidden flex flex-col h-full">
           <motion.div 
-            className="grid grid-cols-2 gap-10 px-8 flex-1 content-start pb-4"
+            className="grid grid-cols-2 gap-6 px-4 flex-1 content-start pb-4"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -290,13 +360,14 @@ const DesktopOS = () => {
         </div>
       </div>
 
-      {/* Modern Chat */}
+      {/* ✅ MODERN CHAT CON onOpenQuote */}
       <ModernChat
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         onMinimize={() => setChatMinimized(!chatMinimized)}
         isMinimized={chatMinimized}
         isMobile={isMobile}
+        onOpenQuote={openQuoteWindow}
       />
 
       {/* Windows - Renderizado dinámico según tipo */}
