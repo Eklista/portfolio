@@ -233,3 +233,38 @@ html {
 .animate-float {
   animation: float 3s ease-in-out infinite !important;
 }
+
+@layer utilities {
+  /* Clases para elementos interactivos con cursor personalizado */
+  .folder-item {
+    /* Ya existe en tu Folder.jsx */
+  }
+  
+  .project-item {
+    /* Para items de proyectos en WindowExplorer */
+  }
+  
+  .chat-input {
+    /* Para inputs del chat */
+  }
+  
+  .chat-button {
+    /* Para botones del chat */
+  }
+  
+  .window-header {
+    /* Para headers de ventanas draggables */
+  }
+  
+  .terminal {
+    /* Para elementos de terminal */
+  }
+  
+  .quote-step {
+    /* Para pasos del cotizador */
+  }
+  
+  .portfolio-gallery {
+    /* Para imágenes del portfolio */
+  }
+}
