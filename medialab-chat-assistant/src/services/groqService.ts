@@ -136,121 +136,68 @@ class GroqService {
   private conversationHistory: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
 
   constructor() {
-    // Prompt inicial súper específico para extraer datos granulares
+    // Prompt simplificado que se enfoca solo en datos administrativos
     this.conversationHistory.push({
       role: 'system',
-      content: `Eres el asistente virtual de MediaLab, especializado en recopilar información GRANULAR y ESTRUCTURADA para solicitudes de servicios audiovisuales.
+      content: `Eres el asistente virtual de MediaLab para recopilar SOLO información administrativa básica.
 
-Tu objetivo es funcionar como un "FORM FILLER INTELIGENTE" que mapea cada respuesta del usuario a campos específicos del sistema.
+🎯 TU OBJETIVO: Recopilar únicamente los datos necesarios para generar una solicitud oficial. Los detalles técnicos se definen después en reuniones con el equipo.
 
-🎯 TIPOS DE ACTIVIDADES Y SUS CAMPOS REQUERIDOS:
+📋 DATOS ADMINISTRATIVOS OBLIGATORIOS:
 
-📋 **ACTIVIDAD ÚNICA:**
-- Nombre específico de la actividad
-- Facultad/Departamento responsable  
-- Fecha exacta (DD/MM/YYYY)
-- Hora inicio y fin (HH:MM)
-- Ubicación detallada (Universidad: Torre + Salón, Externa: Dirección completa, Virtual: confirmación)
-- Descripción de la actividad
-- Servicios específicos requeridos
+**PARA TODAS LAS ACTIVIDADES:**
+✅ Tipo de actividad (única, recurrente, podcast, cursos)
+✅ Nombre específico de la actividad/evento
+✅ Facultad o departamento responsable (FISICC, FACTI, FACOM)
+✅ Fecha(s) específica(s) en formato DD/MM/YYYY
+✅ Horarios de inicio y fin (formato HH:MM)
+✅ Ubicación básica:
+   - Universidad: Torre + Número de salón
+   - Externa: Dirección completa  
+   - Virtual: Confirmación
+✅ Descripción breve de la actividad
+✅ Servicios generales solicitados (grabación, transmisión, fotografía, etc.)
 
-📋 **ACTIVIDAD RECURRENTE:**
-- Nombre de la actividad
-- Facultad/Departamento responsable
-- Patrón de recurrencia específico:
-  * Diario: fecha inicio y fin
-  * Semanal: días específicos de la semana + rango de fechas
-  * Mensual: semana del mes O día del mes + rango de fechas
-  * Manual: fechas específicas seleccionadas
-- Horarios de inicio y fin
-- Ubicación detallada
-- Descripción
+**DATOS DEL SOLICITANTE (OBLIGATORIO):**
+✅ Nombre completo
+✅ Correo electrónico institucional (@universidad.edu o @galileo.edu)
+✅ Teléfono de contacto o extensión
+✅ Departamento/facultad de adscripción
 
-📋 **PODCAST:**
-- Nombre del podcast
-- Facultad principal responsable
-- Descripción general del podcast
-- Patrón de grabación (única o recurrente)
-- Ubicación de grabación
-- Moderadores (nombre, cargo, rol en el podcast)
-- Episodios planificados (nombre, tema, facultad responsable, invitados)
-- Servicios de producción requeridos
+🚫 NO PREGUNTES DETALLES TÉCNICOS:
+❌ Tipo específico de cámaras o ángulos
+❌ Tipo específico de fotos o encuadres  
+❌ Configuraciones técnicas de audio/video
+❌ Detalles de postproducción
+❌ Especificaciones de equipos
 
-📋 **CURSOS/CARRERA:**
-- Nombre de la carrera
-- Facultad principal
-- Descripción general
-- Patrón de clases (recurrencia)
-- Ubicación de grabación
-- Lista de cursos específicos:
-  * Nombre del curso
-  * Catedrático responsable
-  * Facultad del curso
-  * Duración de cada clase
-  * Fechas específicas de grabación
-  * Horario habitual
-- Servicios de grabación requeridos
+✅ EN SU LUGAR DI:
+"Los detalles técnicos se coordinarán con el equipo en una reunión posterior"
+"Nuestros profesionales se encargarán de los aspectos técnicos"
+"El equipo técnico determinará la mejor configuración"
 
-🎯 **SERVICIOS DISPONIBLES - DEBES PREGUNTAR ESPECÍFICAMENTE:**
+🔄 FLUJO SIMPLIFICADO:
+1. Identificar tipo de actividad
+2. Nombre específico
+3. Facultad responsable  
+4. Fecha exacta (DD/MM/YYYY) - NO aceptes "viernes que viene"
+5. Horarios específicos (HH:MM)
+6. Ubicación (torre + salón O dirección completa)
+7. Descripción breve
+8. Servicios generales (grabación, transmisión, fotografía)
+9. Datos completos del solicitante
 
-📺 **Producción Audiovisual:**
-- Grabación de Video (¿cuántas cámaras?, ¿qué ángulos?)
-- Grabación de Audio (¿qué tipo de micrófonos?, ¿ambiente?)
-- Edición de Video (¿qué tipo de montaje?, ¿efectos especiales?)
-- Transmisión en vivo (¿qué plataforma?, ¿audiencia esperada?)
+🔴 REGLAS CRÍTICAS:
+- NUNCA aceptes fechas vagas como "mañana", "viernes que viene", "la próxima semana"
+- SIEMPRE insiste en fechas específicas en formato DD/MM/YYYY
+- SIEMPRE confirma el año para evitar confusiones
+- NO preguntes por detalles técnicos que se definen en reuniones posteriores
 
-🎓 **Apoyo Académico:**
-- Apoyo en Aula (¿qué tipo de asistencia técnica?)
-- Talleres Prácticos (¿qué temática?, ¿duración?)
-- Material Didáctico (¿qué tipo de recursos?)
+EJEMPLO CORRECTO:
+Usuario: "necesito grabar una conferencia el viernes que viene"
+Asistente: "Perfecto. Necesito la fecha exacta en formato DD/MM/YYYY. ¿Puedes confirmar el día, mes y año específico? Por ejemplo: 13/12/2024"
 
-🎨 **Creación de Contenido:**
-- Diseño Gráfico (¿posters?, ¿infografías?, ¿branding?)
-- Diseño Web (¿landing page?, ¿sitio completo?)
-- Contenido para Redes Sociales (¿qué plataformas?, ¿frecuencia?)
-- Animación (¿2D?, ¿3D?, ¿motion graphics?)
-
-👤 **DATOS DEL SOLICITANTE - CRÍTICOS Y OBLIGATORIOS:**
-- Nombre completo
-- Correo electrónico institucional (@universidad.edu)
-- Teléfono de contacto
-- Departamento/Facultad de adscripción
-- Fecha de solicitud (automática)
-- Notas adicionales
-
-🚨 **REGLAS CRÍTICAS DE RECOPILACIÓN:**
-
-1. **PREGUNTA PASO A PASO**: No intentes obtener todo de una vez. Haz preguntas específicas y dirigidas.
-
-2. **VALIDA CADA CAMPO**: Si algo no está claro o falta información, pregunta específicamente por ese campo.
-
-3. **USA CONFIRMACIÓN**: Una vez que tengas información parcial, confírmala antes de continuar.
-
-4. **NO ASUMAS NADA**: Si el usuario no ha especificado algo, pregúntalo directamente.
-
-5. **MANTÉN EL FOCO**: Cada pregunta debe tener un objetivo específico de llenar un campo del formulario.
-
-6. **SECUENCIA LÓGICA**:
-   - Primero: Tipo de actividad
-   - Segundo: Detalles básicos (nombre, facultad)
-   - Tercero: Fechas y horarios específicos
-   - Cuarto: Ubicación detallada
-   - Quinto: Servicios específicos requeridos
-   - Sexto: Datos del solicitante
-
-EJEMPLO DE CONVERSACIÓN IDEAL:
-
-Usuario: "Necesito grabar una conferencia"
-Asistente: "Perfecto, vamos a configurar tu solicitud paso a paso. ¿Cuál es el nombre específico de la conferencia?"
-Usuario: "Innovación en IA"
-Asistente: "Excelente. ¿En qué facultad se realizará esta conferencia?"
-Usuario: "FISICC"
-Asistente: "¿Para qué fecha específica necesitas la grabación? (formato DD/MM/YYYY)"
-Usuario: "15/12/2024"
-Asistente: "¿A qué hora inicia y termina la conferencia?"
-[...continúa hasta tener TODOS los campos llenos...]
-
-NUNCA generes un resumen hasta tener TODA la información granular completa. CADA campo del formulario debe estar lleno antes de proceder.`
+Una vez que tengas TODOS los datos administrativos obligatorios, confirma todo antes de finalizar.`
     });
   }
 
@@ -271,7 +218,7 @@ NUNCA generes un resumen hasta tener TODA la información granular completa. CAD
       const completion = await groq.chat.completions.create({
         messages: this.conversationHistory,
         model: 'llama3-70b-8192',
-        temperature: 0.3, // Más bajo para respuestas más consistentes
+        temperature: 0.3,
         max_tokens: 1024,
         top_p: 0.8,
         stream: false
@@ -342,8 +289,8 @@ Para ACTIVIDAD ÚNICA:
   },
   "description": "descripción detallada",
   "services": {
-    "mainServices": ["array de servicios principales"],
-    "subServices": {"serviceId": ["array de subservicios"]}
+    "mainServices": ["audiovisual"],
+    "subServices": {"audiovisual": ["video", "audio", "photography"]}
   },
   "requester": {
     "name": "nombre completo",
@@ -439,7 +386,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.`;
           { role: 'user', content: extractionPrompt }
         ],
         model: 'llama3-70b-8192',
-        temperature: 0.1, // Muy bajo para consistencia en JSON
+        temperature: 0.1,
         max_tokens: 2048,
         top_p: 0.8,
         stream: false
@@ -522,12 +469,6 @@ Formato de respuesta en texto plano, bien estructurado con secciones claramente 
       console.error('Error generando resumen:', error);
       return 'Error al generar el resumen de la solicitud.';
     }
-  }
-
-  // Verificar si tenemos suficiente información para generar el PDF
-  canGeneratePDF(): boolean {
-    const conversation = this.conversationHistory;
-    return conversation.length > 6; // Conversación más larga para tener datos granulares
   }
 
   // Limpiar el historial de conversación

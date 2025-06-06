@@ -1,27 +1,14 @@
-// src/services/pdfGenerator.ts
-import { groqService, type ExtractedActivityData } from './groqService';
-
-class PDFGenerator {
-  
-  // Generar datos estructurados de la conversación
-  async extractDataForPDF(): Promise<ExtractedActivityData | null> {
-    try {
-      console.log('🔄 Extrayendo datos estructurados para PDF...');
-      
-      // Usar el nuevo método de extracción granular
-      const structuredData = await groqService.extractStructuredData();
-      
-      if (!structuredData) {
-        console.warn('⚠️ No se pudieron extraer datos estructurados');
-        return null;
-      }
-      
-      console.log('✅ Datos estructurados extraídos:', structuredData);
-      return structuredData;
+return { data: structuredData, validation };
       
     } catch (error) {
       console.error('❌ Error extrayendo datos para PDF:', error);
-      return null;
+      return { 
+        data: null, 
+        validation: { 
+          isValid: false, 
+          missingFields: ['Error técnico extrayendo datos de la conversación'] 
+        } 
+      };
     }
   }
 
@@ -172,36 +159,6 @@ class PDFGenerator {
                 background: #f9fafb;
             }
             
-            /* Listas de elementos */
-            .item-list {
-                list-style: none;
-                padding: 0;
-            }
-            
-            .item-list li {
-                padding: 4px 8px;
-                margin-bottom: 3px;
-                background: #f9fafb;
-                border: 1px solid #e5e7eb;
-                border-radius: 3px;
-                font-size: 11px;
-            }
-            
-            .item-list li strong {
-                color: #1f2937;
-            }
-            
-            /* Patrones de recurrencia */
-            .recurrence-pattern {
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                border-radius: 4px;
-                padding: 8px;
-                margin: 8px 0;
-                font-size: 11px;
-                color: #1e40af;
-            }
-            
             /* Footer */
             .footer {
                 margin-top: 30px;
@@ -339,7 +296,7 @@ class PDFGenerator {
             ${this.generateRequesterSection(data.requester)}`;
   }
 
-  // Generar contenido para actividad recurrente
+  // Generar contenido para actividad recurrente  
   private generateRecurrentActivityContent(data: any): string {
     return `
             <div class="section activity-recurrent">
@@ -533,7 +490,7 @@ class PDFGenerator {
                             <div class="info-value">${recurrence.startTime || 'No especificado'} - ${recurrence.endTime || 'No especificado'}</div>
                         </div>
                     </div>
-                    <div class="recurrence-pattern">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 11px; color: #1e40af;">
                         <strong>Patrón de Recurrencia:</strong> ${patternDescription}
                     </div>
                 </div>`;
@@ -675,6 +632,7 @@ class PDFGenerator {
       'audio': 'Grabación de Audio',
       'editing': 'Edición de Video',
       'streaming': 'Transmisión en vivo',
+      'photography': 'Fotografía',
       'classroom': 'Apoyo en Aula',
       'workshop': 'Talleres Prácticos',
       'material': 'Material Didáctico',
@@ -692,14 +650,14 @@ class PDFGenerator {
         const subServices = services.subServices?.[mainServiceId] || [];
         
         const subServicesList = subServices.map((subId: string) => 
-          `<li>${subServiceLabels[subId] || subId}</li>`
+          `<li style="padding: 2px 0;">${subServiceLabels[subId] || subId}</li>`
         ).join('');
 
         servicesContent += `
                     <div class="info-item">
                         <div class="info-label">${serviceName}</div>
                         <div class="info-value">
-                            ${subServices.length > 0 ? `<ul class="item-list">${subServicesList}</ul>` : 'Servicio principal seleccionado'}
+                            ${subServices.length > 0 ? `<ul style="list-style: disc; margin-left: 15px; font-size: 11px;">${subServicesList}</ul>` : 'Servicio principal seleccionado'}
                         </div>
                     </div>`;
       });
@@ -760,73 +718,155 @@ class PDFGenerator {
                 </div>`;
   }
 
-  // Generar y descargar PDF
-  async generateAndDownloadPDF(): Promise<void> {
+  // Generar y descargar PDF con mejor manejo de errores
+  async generateAndDownloadPDF(): Promise<string> {
     try {
       console.log('🔄 Iniciando generación de PDF profesional...');
       
-      // Extraer datos estructurados
-      const structuredData = await this.extractDataForPDF();
+      // Extraer y validar datos estructurados
+      const { data: structuredData, validation } = await this.extractDataForPDF();
       
-      if (!structuredData) {
-        throw new Error('No se pudieron extraer datos suficientes para generar el PDF. Asegúrate de completar toda la información requerida.');
+      if (!validation.isValid) {
+        const helpMessage = this.generateHelpMessage(validation.missingFields);
+        throw new Error(helpMessage);
       }
       
-      // Generar HTML profesional
-      const htmlContent = this.generateHTMLContent(structuredData);
-      
-      // Crear blob con el HTML
-      const blob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+      if (!structuredData) {
+        throw new Error('❌ **Error técnico**\n\nNo se pudieron extraer datos de la conversación. Intenta reformular tu solicitud con más detalles específicos.');
+      }
       
       // ID único para el archivo
       const requestId = `ML-${Date.now()}`;
       
-      // Crear enlace de descarga
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `MediaLab_Solicitud_${structuredData.type}_${requestId}.html`;
+      // Generar HTML profesional
+      const htmlContent = this.generateHTMLContent(structuredData);
       
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Generar PDF optimizado
+      console.log('📄 Generando PDF optimizado...');
+      this.generatePDFAlternative(htmlContent, requestId, structuredData.type);
       
-      // Cleanup
-      URL.revokeObjectURL(url);
-      
-      console.log('✅ PDF generado y descargado:', requestId);
-      
-      // Abrir en nueva ventana para imprimir como PDF
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        
-        // Auto-trigger print dialog después de un pequeño delay
-        setTimeout(() => {
-          printWindow.print();
-        }, 1500);
-      }
+      return '✅ **¡PDF generado exitosamente!**\n\nTu solicitud oficial ha sido generada. Se abrió una nueva ventana para imprimir el documento como PDF.\n\n*Consejo: Usa Ctrl+P y selecciona "Guardar como PDF" para obtener el mejor resultado.*';
       
     } catch (error) {
       console.error('❌ Error generando PDF:', error);
-      throw new Error('No se pudo generar el PDF. Verifica que has completado toda la información requerida.');
+      
+      if (error instanceof Error && error.message.includes('❌')) {
+        // Error con mensaje de ayuda formateado
+        return error.message;// src/services/pdfGenerator.ts
+import { groqService, type ExtractedActivityData } from './groqService';
+
+class PDFGenerator {
+  
+  // Validar qué datos faltan específicamente
+  private validateDataCompleteness(data: ExtractedActivityData | null): { isValid: boolean; missingFields: string[] } {
+    const missingFields: string[] = [];
+    
+    if (!data) {
+      return { isValid: false, missingFields: ['No se pudieron extraer datos de la conversación'] };
     }
+
+    // Validaciones comunes para todos los tipos
+    if (!data.requester?.name || data.requester.name === 'No especificado') {
+      missingFields.push('Nombre completo del solicitante');
+    }
+    
+    if (!data.requester?.email || data.requester.email === 'No especificado') {
+      missingFields.push('Correo electrónico institucional');
+    }
+    
+    if (!data.requester?.department || data.requester.department === 'No especificado') {
+      missingFields.push('Departamento/Facultad del solicitante');
+    }
+
+    // Validaciones específicas por tipo
+    switch (data.type) {
+      case 'single':
+        if (!data.activityName || data.activityName === 'No especificado') {
+          missingFields.push('Nombre específico de la actividad');
+        }
+        if (!data.faculty || data.faculty === 'No especificado') {
+          missingFields.push('Facultad responsable');
+        }
+        if (!data.date || data.date === 'No especificado') {
+          missingFields.push('Fecha específica (DD/MM/YYYY)');
+        }
+        if (!data.startTime || data.startTime === 'No especificado') {
+          missingFields.push('Hora de inicio');
+        }
+        if (!data.endTime || data.endTime === 'No especificado') {
+          missingFields.push('Hora de fin');
+        }
+        if (!data.location?.type || data.location.type === 'No especificado') {
+          missingFields.push('Tipo de ubicación');
+        }
+        if (data.location?.type === 'university' && (!data.location.tower || !data.location.classroom)) {
+          missingFields.push('Torre y salón específicos');
+        }
+        if (data.location?.type === 'external' && !data.location.externalAddress) {
+          missingFields.push('Dirección externa completa');
+        }
+        break;
+        
+      case 'recurrent':
+        if (!data.activityName || data.activityName === 'No especificado') {
+          missingFields.push('Nombre de la actividad recurrente');
+        }
+        if (!data.recurrence?.startDate || !data.recurrence?.endDate) {
+          missingFields.push('Fechas de inicio y fin del periodo');
+        }
+        break;
+        
+      case 'podcast':
+        if (!data.podcastName || data.podcastName === 'No especificado') {
+          missingFields.push('Nombre del podcast');
+        }
+        break;
+        
+      case 'course':
+        if (!data.careerName || data.careerName === 'No especificado') {
+          missingFields.push('Nombre de la carrera');
+        }
+        break;
+    }
+
+    return { isValid: missingFields.length === 0, missingFields };
   }
 
-  // Verificar si se puede generar PDF con datos granulares
-  canGeneratePDF(): boolean {
-    const conversation = groqService.getConversationHistory();
-    return conversation.length > 6; // Requiere conversación más extensa para datos granulares
+  // Generar mensaje de ayuda específico
+  private generateHelpMessage(missingFields: string[]): string {
+    let helpMessage = `❌ **No se puede generar el PDF - Información faltante:**\n\n`;
+    
+    missingFields.forEach((field, index) => {
+      helpMessage += `${index + 1}. ${field}\n`;
+    });
+    
+    helpMessage += `\n**💡 Para completar tu solicitud, proporciona:**\n`;
+    helpMessage += `- Datos administrativos básicos\n`;
+    helpMessage += `- Fechas específicas en formato DD/MM/YYYY\n`;
+    helpMessage += `- Ubicación exacta (torre + salón)\n`;
+    helpMessage += `- Tu información de contacto completa\n\n`;
+    helpMessage += `*Nota: Los detalles técnicos (tipo de fotos, ángulos, etc.) se definirán en reuniones posteriores con el equipo técnico.*`;
+    
+    return helpMessage;
   }
 
-  // Obtener vista previa de datos estructurados
-  async getPreviewData(): Promise<ExtractedActivityData | null> {
-    return await this.extractDataForPDF();
-  }
-}
-
-// Singleton
-export const pdfGenerator = new PDFGenerator();
-export default PDFGenerator;
+  // Generar datos estructurados de la conversación con validación
+  async extractDataForPDF(): Promise<{ data: ExtractedActivityData | null; validation: { isValid: boolean; missingFields: string[] } }> {
+    try {
+      console.log('🔄 Extrayendo datos estructurados para PDF...');
+      
+      // Usar el método de extracción granular
+      const structuredData = await groqService.extractStructuredData();
+      
+      console.log('📊 Datos extraídos:', structuredData);
+      
+      // Validar completitud
+      const validation = this.validateDataCompleteness(structuredData);
+      
+      if (!validation.isValid) {
+        console.warn('⚠️ Datos incompletos:', validation.missingFields);
+      } else {
+        console.log('✅ Datos completos y válidos');
+      }
+      
+      return {
