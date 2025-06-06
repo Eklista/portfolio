@@ -1,4 +1,4 @@
-// src/services/groqChatAI.js
+// src/services/groqChatAI.js - ARREGLADO: Memoria persistente + Contexto claro
 import { projectTypes, calculateTotalPrice, formatPrice } from '../data/pricing.js';
 import { explorerStructure, projectsData } from '../data/projects.js';
 
@@ -6,16 +6,31 @@ class EklistaChatAI {
   constructor() {
     this.isInitialized = false;
     this.groq = null;
+    this.conversationHistory = []; // ✅ NUEVA: Historial completo de conversación
+    this.sessionState = {
+      userName: null,
+      hasAskedName: false,
+      conversationStage: 'greeting',
+      briefData: {
+        projectType: null,
+        businessType: null,
+        features: [],
+        budget: null,
+        timeline: null,
+        needsHelp: false
+      },
+      messageCount: 0,
+      lastResponse: null // Para evitar repeticiones
+    };
     this.initializeGroq();
   }
 
   async initializeGroq() {
     try {
-      // Importación dinámica para evitar errores de SSR
       const { Groq } = await import('groq-sdk');
       this.groq = new Groq({
         apiKey: import.meta.env.VITE_GROQ_API_KEY,
-        dangerouslyAllowBrowser: true // Para uso en frontend
+        dangerouslyAllowBrowser: true
       });
       this.isInitialized = true;
       console.log('✅ Groq inicializado correctamente');
@@ -25,141 +40,303 @@ class EklistaChatAI {
     }
   }
 
-  buildSystemPrompt() {
-    const portfolioSummary = {
-      servicios: projectTypes.map(pt => ({
-        nombre: pt.name,
-        descripcion: pt.description,
-        precio_base: formatPrice(pt.basePrice)
-      })),
-      proyectos_destacados: [
-        'Banking Web App - FinTech Guatemala (2024)',
-        'E-commerce Platform - Fashion Forward (2024)', 
-        'Restaurant Digital Experience - Sabor Auténtico (2023)'
-      ],
-      habilidades: ['React', 'Next.js', 'WordPress', 'Figma', 'UX/UI Design'],
-      ubicacion: 'Guatemala City, Guatemala',
-      experiencia: '5+ años, 50+ proyectos completados'
-    };
-
-    return `Eres Pablo (EKLISTA), un diseñador web y desarrollador guatemalteco. Actúas como un consultor amigable que ayuda a los clientes a entender sus necesidades y encontrar la mejor solución.
-
-INFORMACIÓN SOBRE TI:
-${JSON.stringify(portfolioSummary, null, 2)}
-
-PERSONALIDAD:
-- Conversacional y consultivo, no robótico
-- Haces preguntas para entender mejor las necesidades del cliente
-- Educas al cliente sobre las opciones disponibles
-- Guatemalteco profesional pero cercano
-- Usas ejemplos específicos de tus proyectos cuando es relevante
-
-FILOSOFÍA DE CONVERSACIÓN:
-1. ESCUCHA primero - haz preguntas para entender qué necesita el cliente
-2. EDUCA - explica las opciones y diferencias entre servicios
-3. RECOMIENDA - sugiere la mejor solución basada en sus necesidades
-4. GUÍA - lleva al cliente paso a paso hacia la decisión correcta
-
-REGLAS DE CONVERSACIÓN:
-- NO menciones el cotizador inmediatamente - primero entiende qué necesita
-- HAZ preguntas de seguimiento para clarificar necesidades
-- USA ejemplos de tus proyectos cuando sea relevante al caso del cliente
-- MENCIONA precios solo cuando el cliente los pregunte directamente
-- MANTÉN la conversación fluida y natural
-- TERMINA con preguntas que hagan avanzar la conversación
-
-EJEMPLOS DE FLOW CONVERSACIONAL:
-
-Cliente: "Necesito una página web"
-TÚ: "¡Perfecto! Me encanta ayudar con proyectos web. Para poder recomendarte la mejor solución, cuéntame un poco más: ¿es para tu negocio personal, una empresa, o qué tipo de proyecto tienes en mente?"
-
-Cliente: "¿Cuánto cuesta?"
-TÚ: "Los precios varían bastante según lo que necesites. Por ejemplo, un sitio básico de WordPress puede empezar desde Q1,200, pero una aplicación web custom puede ser Q4,000+. ¿Qué tipo de funcionalidades tienes en mente? ¿Es más informativo, necesitas ventas online, o algo más específico?"
-
-NUNCA respondas como FAQ - siempre mantén el tono conversacional y haz seguimiento.`;
-  }
-
-  // Respuestas rápidas para consultas comunes
-  getQuickResponse(message) {
-    const msg = message.toLowerCase().trim();
+  // ✅ NUEVO: Agregar mensaje al historial
+  addToHistory(role, content) {
+    this.conversationHistory.push({
+      role,
+      content,
+      timestamp: new Date(),
+      stage: this.sessionState.conversationStage
+    });
     
-    // Saludos - más conversacional
-    if (msg.includes('hola') || msg.includes('hello') || msg.includes('hi') || msg === 'hey') {
-      return {
-        isQuick: true,
-        response: `¡Hola! 👋 Soy Pablo, pero puedes decirme EKLISTA.
-
-Me dedico al diseño web y desarrollo aquí en Guatemala. Me encanta ayudar a empresarios y emprendedores a crear sus proyectos digitales.
-
-¿En qué estás trabajando? ¿Tienes algún proyecto en mente o hay algo específico que te gustaría saber sobre lo que hago?`
-      };
+    // Mantener solo últimos 10 mensajes para no exceder límites
+    if (this.conversationHistory.length > 20) {
+      this.conversationHistory = this.conversationHistory.slice(-20);
     }
-
-    // Solo dar respuestas rápidas muy específicas, el resto que vaya a AI
-    return null; // Dejar que AI maneje casi todo
   }
 
-  // Clasificar el tipo de consulta para mejor contexto
-  classifyIntent(message) {
+  // ✅ NUEVO: Obtener contexto de conversación
+  getConversationContext() {
+    if (this.conversationHistory.length === 0) return '';
+    
+    let context = '\n\nHISTORIAL DE CONVERSACIÓN:\n';
+    this.conversationHistory.slice(-6).forEach(msg => {
+      context += `${msg.role.toUpperCase()}: ${msg.content}\n`;
+    });
+    
+    return context;
+  }
+
+  // Detectar nombre (mejorado)
+  extractNameFromMessage(message) {
+    const msg = message.trim();
+    
+    const namePatterns = [
+      /mi nombre es ([a-záéíóúñ\s]+)/i,
+      /me llamo ([a-záéíóúñ\s]+)/i,
+      /soy ([a-záéíóúñ\s]+)/i,
+      /^([a-záéíóúñ]+)$/i,
+    ];
+
+    for (const pattern of namePatterns) {
+      const match = msg.match(pattern);
+      if (match && match[1]) {
+        const name = match[1].trim();
+        if (name.length > 1 && !['hola', 'hello', 'hi', 'buenas', 'que tal', 'precio', 'servicio'].includes(name.toLowerCase())) {
+          return name.split(' ')[0];
+        }
+      }
+    }
+    return null;
+  }
+
+  // Detectar intención de pricing
+  detectsPricingIntent(message) {
+    const pricingKeywords = [
+      'precio', 'costo', 'cuanto', 'cotiz', 'presupuesto', 
+      'tarifa', 'valor', 'cuesta', 'cobras', 'factur'
+    ];
+    
+    return pricingKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword)
+    );
+  }
+
+  // Detectar tipo de proyecto
+  detectProjectType(message) {
     const msg = message.toLowerCase();
     
-    if (msg.includes('precio') || msg.includes('costo') || msg.includes('cuanto')) {
-      return 'pricing';
+    if (msg.includes('logo') || msg.includes('identidad') || msg.includes('marca') || msg.includes('branding')) {
+      return 'graphic-design';
     }
-    if (msg.includes('servicio') || msg.includes('qué haces')) {
-      return 'services';
+    if (msg.includes('pagina') || msg.includes('sitio') || msg.includes('web') || msg.includes('wordpress')) {
+      return 'wordpress';
     }
-    if (msg.includes('portfolio') || msg.includes('trabajo') || msg.includes('proyecto')) {
-      return 'portfolio';
+    if (msg.includes('app') || msg.includes('aplicacion') || msg.includes('sistema') || msg.includes('custom')) {
+      return 'custom-development';
     }
-    if (msg.includes('contacto') || msg.includes('email') || msg.includes('whatsapp')) {
-      return 'contact';
-    }
-    if (msg.includes('cotiz') || msg.includes('presupuesto')) {
-      return 'quote';
+    if (msg.includes('diseño') || msg.includes('interfaz') || msg.includes('ux') || msg.includes('ui')) {
+      return 'ux-ui';
     }
     
-    return 'general';
+    return null;
   }
 
-  // Respuesta principal con Groq
+  // ✅ NUEVO: Sistema prompt MUCHO más claro y con memoria
+  buildSystemPrompt() {
+    const { userName, conversationStage, briefData } = this.sessionState;
+    
+    // ✅ INFORMACIÓN CORREGIDA DE PRECIOS
+    const servicesInfo = `
+SERVICIOS Y PRECIOS (EN QUETZALES GUATEMALTECOS):
+• Diseño Gráfico/Branding: Desde ${formatPrice(500)} 
+• Sitios WordPress: Desde ${formatPrice(1200)}
+• UX/UI Design: Desde ${formatPrice(800)}  
+• Desarrollo Custom: Desde ${formatPrice(4000)}
+
+EJEMPLOS DE PROYECTOS COMPLETADOS:
+• Banking Web App para FinTech (2024)
+• E-commerce Platform para Fashion Forward (2024)
+• Restaurant Website para Sabor Auténtico (2023)`;
+
+    let systemPrompt = `Eres Pablo de EKLISTA, diseñador web guatemalteco profesional pero amigable.
+
+${servicesInfo}
+
+DATOS DE SESIÓN ACTUAL:
+- Cliente: ${userName || 'Sin identificar'}
+- Etapa: ${conversationStage}
+- Proyecto detectado: ${briefData.projectType || 'No definido'}
+- Tipo de negocio: ${briefData.businessType || 'No definido'}
+- Características: ${briefData.features.join(', ') || 'Ninguna'}
+
+CONTEXTO HISTÓRICO:${this.getConversationContext()}
+
+INSTRUCCIONES ESPECÍFICAS PARA ESTA ETAPA:`;
+
+    // ✅ PROMPTS ESPECÍFICOS SIN REPETIR SALUDOS
+    if (conversationStage === 'greeting' && !userName) {
+      systemPrompt += `
+ETAPA: SALUDO INICIAL
+- Pregunta amablemente el nombre del usuario
+- NO digas "hola de nuevo" o "por acá de nuevo"
+- Sé directo: "¿Cómo te llamas?"`;
+      
+    } else if (conversationStage === 'helping') {
+      systemPrompt += `
+ETAPA: AYUDA GENERAL  
+- El usuario es ${userName}
+- Responde preguntas sobre servicios, portfolio, precios
+- SI mencionan precios/cotización, pasa a hacer preguntas sobre su proyecto
+- NO repitas saludos, ya se presentaron
+- Usa el nombre solo ocasionalmente, no en cada mensaje`;
+      
+    } else if (conversationStage === 'briefing') {
+      systemPrompt += `
+ETAPA: RECOLECTANDO INFORMACIÓN DEL PROYECTO
+- Ya sabes que es ${userName}
+- Haz 1-2 preguntas específicas sobre su proyecto
+- NO repitas información que ya tienes
+- Enfócate en completar el brief`;
+      
+    } else if (conversationStage === 'pricing') {
+      const estimate = this.calculateBriefEstimate(briefData);
+      systemPrompt += `
+ETAPA: COTIZACIÓN
+- Da precio estimado basado en la información recolectada
+- Estimación sugerida: ${estimate ? `${formatPrice(estimate.min)} - ${formatPrice(estimate.max)}` : 'Por definir'}
+- Ofrece continuar con cotizador detallado`;
+    }
+
+    systemPrompt += `
+
+REGLAS IMPORTANTES:
+1. NO repitas saludos o presentaciones
+2. NO digas "hola de nuevo" o similares  
+3. USA el nombre del cliente solo cuando sea natural
+4. CUANDO MENCIONES PRECIOS, siempre usa formato de quetzales (Q1,200 NO "1200 proyectos")
+5. SÉ CONVERSACIONAL pero conciso
+6. RECUERDA el contexto de mensajes anteriores
+7. NO hagas las mismas preguntas dos veces`;
+
+    return systemPrompt;
+  }
+
+  // Calcular estimación de precio
+  calculateBriefEstimate(briefData) {
+    const baseProject = projectTypes.find(pt => pt.id === briefData.projectType);
+    if (!baseProject) return null;
+
+    let estimatedPrice = baseProject.basePrice;
+    
+    if (briefData.features.includes('e-commerce') || briefData.features.includes('tienda')) {
+      estimatedPrice += 800;
+    }
+    if (briefData.features.includes('reservas') || briefData.features.includes('booking')) {
+      estimatedPrice += 400;
+    }
+    if (briefData.features.includes('multiidioma')) {
+      estimatedPrice += 600;
+    }
+    
+    const range = {
+      min: Math.round(estimatedPrice * 0.8),
+      max: Math.round(estimatedPrice * 1.3)
+    };
+    
+    return range;
+  }
+
+  // ✅ MÉTODO PRINCIPAL MEJORADO CON MEMORIA
   async respond(userMessage) {
     try {
-      // 1. Verificar respuestas rápidas primero
-      const quickResponse = this.getQuickResponse(userMessage);
-      if (quickResponse?.isQuick) {
-        return {
-          content: quickResponse.response,
-          source: 'quick',
-          success: true
-        };
+      this.sessionState.messageCount++;
+      
+      // ✅ AGREGAR MENSAJE DEL USUARIO AL HISTORIAL
+      if (userMessage !== 'inicio') {
+        this.addToHistory('user', userMessage);
+      }
+      
+      // 1. ETAPA GREETING - Capturar nombre
+      if (this.sessionState.conversationStage === 'greeting') {
+        if (!this.sessionState.hasAskedName && userMessage === 'inicio') {
+          this.sessionState.hasAskedName = true;
+          const response = `¡Hola! 👋 Soy Pablo de EKLISTA.
+
+¿Cómo te llamas? Me gusta conocer a las personas con las que trabajo 😊`;
+          
+          this.addToHistory('assistant', response);
+          return {
+            content: response,
+            source: 'greeting',
+            success: true
+          };
+        } else {
+          // Intentar extraer nombre
+          const extractedName = this.extractNameFromMessage(userMessage);
+          if (extractedName) {
+            this.sessionState.userName = extractedName;
+            this.sessionState.conversationStage = 'helping';
+            
+            const response = `¡Perfecto, ${extractedName}! 🚀 Encantado de conocerte.
+
+¿En qué puedo ayudarte hoy?
+
+🎨 **Servicios** - Desarrollo web, UX/UI, diseño gráfico
+📁 **Portfolio** - Ver mis trabajos anteriores  
+💰 **Precios** - Información de costos
+💬 **Pregunta libre** - Lo que tengas en mente`;
+
+            this.addToHistory('assistant', response);
+            return {
+              content: response,
+              source: 'name-captured',
+              success: true
+            };
+          } else {
+            const response = `No pude captar tu nombre bien 😅 ¿Podrías decírmelo de nuevo?
+
+Por ejemplo: "Me llamo María" o simplemente "Carlos"`;
+
+            this.addToHistory('assistant', response);
+            return {
+              content: response,
+              source: 'name-retry',
+              success: true
+            };
+          }
+        }
       }
 
-      // 2. Si Groq no está disponible, usar respuestas predefinidas mejoradas
+      // 2. DETECTAR CAMBIO A ETAPA DE PRICING
+      if (this.detectsPricingIntent(userMessage) && this.sessionState.conversationStage === 'helping') {
+        this.sessionState.conversationStage = 'briefing';
+        
+        const projectType = this.detectProjectType(userMessage);
+        if (projectType) {
+          this.sessionState.briefData.projectType = projectType;
+        }
+      }
+
+      // 3. USAR GROQ O FALLBACK
       if (!this.isInitialized || !this.groq) {
+        const response = this.getFallbackResponse(userMessage);
+        this.addToHistory('assistant', response);
         return {
-          content: this.getFallbackResponse(userMessage),
+          content: response,
           source: 'fallback',
           success: true
         };
       }
 
-      // 3. Usar Groq para respuestas más complejas
-      const intent = this.classifyIntent(userMessage);
+      // 4. ✅ RESPUESTA CON GROQ + HISTORIAL COMPLETO
       const systemPrompt = this.buildSystemPrompt();
       
-      // Añadir contexto específico según el intent
-      const contextualPrompt = this.addContextForIntent(intent, systemPrompt);
+      // ✅ CREAR MENSAJES CON HISTORIAL COMPLETO
+      const messages = [
+        { role: "system", content: systemPrompt }
+      ];
+      
+      // Agregar historial reciente (últimos 8 mensajes)
+      const recentHistory = this.conversationHistory.slice(-8);
+      recentHistory.forEach(msg => {
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
+      });
+      
+      // Si no hay historial, agregar mensaje actual
+      if (recentHistory.length === 0 && userMessage !== 'inicio') {
+        messages.push({ role: "user", content: userMessage });
+      }
 
       const completion = await this.groq.chat.completions.create({
-        messages: [
-          { role: "system", content: contextualPrompt },
-          { role: "user", content: userMessage }
-        ],
-        model: "llama3-70b-8192", // Modelo más potente
-        temperature: 0.7, // Balance entre creatividad y consistencia
-        max_tokens: 400,
-        top_p: 0.9
+        messages,
+        model: "llama3-70b-8192",
+        temperature: 0.6, // ✅ Bajado para más consistencia
+        max_tokens: 300, // ✅ Reducido para respuestas más concisas
+        top_p: 0.8
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -168,17 +345,26 @@ Me dedico al diseño web y desarrollo aquí en Guatemala. Me encanta ayudar a em
         throw new Error('No response from Groq');
       }
 
+      // 5. ✅ AGREGAR RESPUESTA AL HISTORIAL Y ACTUALIZAR ESTADO
+      this.addToHistory('assistant', response);
+      this.updateSessionState(userMessage, response);
+      this.sessionState.lastResponse = response;
+
       return {
         content: response,
         source: 'groq',
-        success: true
+        success: true,
+        sessionState: this.sessionState
       };
 
     } catch (error) {
       console.error('Error en Groq Chat AI:', error);
       
+      const response = this.getFallbackResponse(userMessage);
+      this.addToHistory('assistant', response);
+      
       return {
-        content: this.getFallbackResponse(userMessage),
+        content: response,
         source: 'fallback',
         success: false,
         error: error.message
@@ -186,122 +372,104 @@ Me dedico al diseño web y desarrollo aquí en Guatemala. Me encanta ayudar a em
     }
   }
 
-  addContextForIntent(intent, basePrompt) {
-    const contextAdditions = {
-      pricing: `\n\nCONTEXTO: El usuario pregunta sobre precios. IMPORTANTE: NO menciones el cotizador inmediatamente. Primero pregunta qué tipo de proyecto tienen en mente, qué funcionalidades necesitan, o para qué negocio es. Da rangos de precios y explica por qué varían. Solo menciona el cotizador si insisten en un precio exacto.`,
-      
-      services: `\n\nCONTEXTO: El usuario quiere conocer servicios. Pregunta específicamente qué tipo de proyecto tienen en mente o qué problema quieren resolver. No hagas una lista de servicios - conversa sobre qué necesita.`,
-      
-      portfolio: `\n\nCONTEXTO: El usuario está interesado en trabajos anteriores. Pregunta qué tipo de proyectos les interesan más para poder mostrarles ejemplos relevantes.`,
-      
-      contact: `\n\nCONTEXTO: El usuario quiere información de contacto. Además de dar la info, pregunta si tienen algún proyecto específico en mente para poder ayudarles mejor.`,
-      
-      quote: `\n\nCONTEXTO: El usuario quiere cotización. ANTES de mencionar el cotizador, pregunta sobre su proyecto: ¿qué tipo de negocio?, ¿qué funcionalidades?, ¿tienen deadline?, etc. Solo después de 2-3 intercambios sugiere el cotizador.`,
-      
-      general: '\n\nCONTEXTO: Conversación general. Sé consultivo y haz preguntas para entender mejor qué necesita el cliente.'
-    };
-
-    return basePrompt + (contextAdditions[intent] || contextAdditions.general);
-  }
-
-  // Respuesta de respaldo cuando Groq no está disponible
-  getFallbackResponse(message) {
-    const intent = this.classifyIntent(message);
+  // Actualizar estado de sesión
+  updateSessionState(userMessage, aiResponse) {
+    const features = [];
+    const msg = userMessage.toLowerCase();
     
-    const fallbackResponses = {
-      pricing: `Mis precios son muy competitivos para Guatemala:
-
-💰 **Diseño Gráfico**: ${formatPrice(500)} - ${formatPrice(1500)}
-💰 **Sitios WordPress**: ${formatPrice(1200)} - ${formatPrice(4000)}  
-💰 **UX/UI Design**: ${formatPrice(800)} - ${formatPrice(2500)}
-💰 **Desarrollo Custom**: ${formatPrice(4000)}+
-
-Los precios varían según la complejidad del proyecto. ¿Quieres una **cotización personalizada y exacta**?`,
-
-      services: `¡Perfecto! Te cuento sobre mis servicios principales:
-
-🎨 **Diseño Gráfico & Branding** - Desde ${formatPrice(500)}
-• Logos e identidad visual
-• Papelería corporativa  
-• Packaging y material promocional
-
-💻 **Desarrollo Web** - Desde ${formatPrice(1200)}
-• Sitios WordPress personalizados
-• Aplicaciones React/Next.js
-• E-commerce y tiendas online
-
-🎯 **UX/UI Design** - Desde ${formatPrice(800)}
-• Investigación de usuarios
-• Prototipos interactivos
-• Interfaces web y móvil
-
-¿Te interesa algún servicio en particular?`,
-
-      portfolio: `¡Excelente pregunta! 🚀 Tengo más de 50 proyectos completados.
-
-**Algunos destacados:**
-• Banking App UI/UX - Interfaz moderna para fintech
-• E-commerce Platform - Tienda completa con +250% en ventas
-• Restaurant Website - Sistema de reservas que aumentó bookings +400%
-
-Para ver **todos los detalles, mockups y casos de estudio**, explora las carpetas del escritorio haciendo doble clic. Están organizadas por categoría.
-
-¿Hay algún tipo de proyecto que te llame más la atención?`,
-
-      contact: `¡Perfecto! Aquí tienes toda mi información:
-
-📧 **Email**: hello@eklista.com
-📱 **WhatsApp**: +502 1234-5678
-💼 **LinkedIn**: /in/eklista
-🐙 **GitHub**: @eklista
-📍 **Ubicación**: Guatemala City, GT
-
-Prefiero **WhatsApp** para una respuesta más rápida. ¿Cuál es la mejor forma de contactarte?`,
-
-      quote: `¡Excelente! Te voy a explicar sobre el cotizador personalizado:
-
-✨ **¿Qué incluye?**
-• Selección de tipo de proyecto
-• Características personalizables  
-• Servicios adicionales opcionales
-• Cotización instantánea y detallada
-
-El cotizador te tomará solo **2 minutos** y tendrás un precio exacto al final.
-
-¿Estás listo para empezar? Puedo abrirte el cotizador ahora mismo.`,
-
-      general: `Gracias por contactarme. Soy Pablo, también conocido como **EKLISTA**.
-
-Soy diseñador gráfico y desarrollador web con **5+ años de experiencia** creando soluciones digitales para empresas en Guatemala y el extranjero.
-
-**¿En qué puedo ayudarte hoy?**
-• Ver mis servicios y precios
-• Explorar mi portfolio de proyectos
-• Obtener una cotización personalizada
-• Información de contacto
-
-¿Hay algo específico que te interese?`
-    };
-
-    return fallbackResponses[intent] || fallbackResponses.general;
+    if (msg.includes('reservas') || msg.includes('booking')) features.push('reservas');
+    if (msg.includes('tienda') || msg.includes('e-commerce') || msg.includes('venta')) features.push('e-commerce');
+    if (msg.includes('multiidioma') || msg.includes('idiomas')) features.push('multiidioma');
+    if (msg.includes('blog')) features.push('blog');
+    
+    this.sessionState.briefData.features = [...new Set([...this.sessionState.briefData.features, ...features])];
+    
+    if (msg.includes('restaurante') || msg.includes('comida')) {
+      this.sessionState.briefData.businessType = 'restaurante';
+    } else if (msg.includes('tienda') || msg.includes('venta')) {
+      this.sessionState.briefData.businessType = 'comercio';
+    } else if (msg.includes('empresa') || msg.includes('corporativ')) {
+      this.sessionState.briefData.businessType = 'corporativo';
+    }
   }
 
-  // Método para verificar si el servicio está disponible
+  // ✅ RESPUESTAS DE FALLBACK MEJORADAS (SIN REPETICIONES)
+  getFallbackResponse(userMessage) {
+    const { userName, conversationStage } = this.sessionState;
+    const namePrefix = userName && conversationStage !== 'greeting' ? `${userName}, ` : '';
+    
+    if (conversationStage === 'briefing' || this.detectsPricingIntent(userMessage)) {
+      return `${namePrefix}para darte un precio preciso, necesito saber:
+
+¿Qué tipo de proyecto tienes en mente?
+• **Sitio web** (WordPress) - Desde ${formatPrice(1200)}
+• **Diseño gráfico** (logo, branding) - Desde ${formatPrice(500)}
+• **UX/UI** (interfaz) - Desde ${formatPrice(800)}
+• **Desarrollo custom** (aplicación) - Desde ${formatPrice(4000)}
+
+¿Para qué tipo de negocio es?`;
+    }
+
+    if (conversationStage === 'helping') {
+      return `${namePrefix}te ayudo con:
+
+🎨 **Diseño Gráfico** - Desde ${formatPrice(500)}
+💻 **Desarrollo Web** - Desde ${formatPrice(1200)}  
+🎯 **UX/UI Design** - Desde ${formatPrice(800)}
+⚡ **Desarrollo Custom** - Desde ${formatPrice(4000)}
+
+¿Cuál te interesa para tu proyecto?`;
+    }
+
+    return `¡Hola! Soy Pablo de EKLISTA, diseñador y desarrollador web en Guatemala.
+
+¿En qué puedo ayudarte hoy?`;
+  }
+
+  // ✅ MÉTODOS DE UTILIDAD MEJORADOS
   isAvailable() {
     return this.isInitialized && this.groq !== null;
   }
 
-  // Método para obtener estadísticas (opcional)
+  getSessionState() {
+    return this.sessionState;
+  }
+
+  getConversationHistory() {
+    return this.conversationHistory;
+  }
+
+  resetSession() {
+    this.conversationHistory = [];
+    this.sessionState = {
+      userName: null,
+      hasAskedName: false,
+      conversationStage: 'greeting',
+      briefData: {
+        projectType: null,
+        businessType: null,
+        features: [],
+        budget: null,
+        timeline: null,
+        needsHelp: false
+      },
+      messageCount: 0,
+      lastResponse: null
+    };
+  }
+
   getStats() {
     return {
       initialized: this.isInitialized,
       hasApiKey: !!import.meta.env.VITE_GROQ_API_KEY,
-      quickResponsesCount: 8 // Número de respuestas rápidas definidas
+      sessionState: this.sessionState,
+      conversationLength: this.conversationHistory.length,
+      currentStage: this.sessionState.conversationStage
     };
   }
 }
 
-// Singleton para usar en toda la aplicación
+// Singleton
 const chatAI = new EklistaChatAI();
 
 export default chatAI;
