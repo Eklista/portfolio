@@ -1,4 +1,121 @@
-return { data: structuredData, validation };
+// src/services/pdfGenerator.ts
+import { groqService, type ExtractedActivityData } from './groqService';
+
+class PDFGenerator {
+  
+  // Validar qué datos faltan específicamente
+  private validateDataCompleteness(data: ExtractedActivityData | null): { isValid: boolean; missingFields: string[] } {
+    const missingFields: string[] = [];
+    
+    if (!data) {
+      return { isValid: false, missingFields: ['No se pudieron extraer datos de la conversación'] };
+    }
+
+    // Validaciones comunes para todos los tipos
+    if (!data.requester?.name || data.requester.name === 'No especificado') {
+      missingFields.push('Nombre completo del solicitante');
+    }
+    
+    if (!data.requester?.email || data.requester.email === 'No especificado') {
+      missingFields.push('Correo electrónico institucional');
+    }
+    
+    if (!data.requester?.department || data.requester.department === 'No especificado') {
+      missingFields.push('Departamento/Facultad del solicitante');
+    }
+
+    // Validaciones específicas por tipo
+    switch (data.type) {
+      case 'single':
+        if (!data.activityName || data.activityName === 'No especificado') {
+          missingFields.push('Nombre específico de la actividad');
+        }
+        if (!data.faculty || data.faculty === 'No especificado') {
+          missingFields.push('Facultad responsable');
+        }
+        if (!data.date || data.date === 'No especificado') {
+          missingFields.push('Fecha específica (DD/MM/YYYY)');
+        }
+        if (!data.startTime || data.startTime === 'No especificado') {
+          missingFields.push('Hora de inicio');
+        }
+        if (!data.endTime || data.endTime === 'No especificado') {
+          missingFields.push('Hora de fin');
+        }
+        if (!data.location?.type) {
+          missingFields.push('Tipo de ubicación');
+        }
+        if (data.location?.type === 'university' && (!data.location.tower || !data.location.classroom)) {
+          missingFields.push('Torre y salón específicos');
+        }
+        if (data.location?.type === 'external' && !data.location.externalAddress) {
+          missingFields.push('Dirección externa completa');
+        }
+        break;
+        
+      case 'recurrent':
+        if (!data.activityName || data.activityName === 'No especificado') {
+          missingFields.push('Nombre de la actividad recurrente');
+        }
+        if (!data.recurrence?.startDate || !data.recurrence?.endDate) {
+          missingFields.push('Fechas de inicio y fin del periodo');
+        }
+        break;
+        
+      case 'podcast':
+        if (!data.podcastName || data.podcastName === 'No especificado') {
+          missingFields.push('Nombre del podcast');
+        }
+        break;
+        
+      case 'course':
+        if (!data.careerName || data.careerName === 'No especificado') {
+          missingFields.push('Nombre de la carrera');
+        }
+        break;
+    }
+
+    return { isValid: missingFields.length === 0, missingFields };
+  }
+
+  // Generar mensaje de ayuda específico
+  private generateHelpMessage(missingFields: string[]): string {
+    let helpMessage = `❌ **No se puede generar el PDF - Información faltante:**\n\n`;
+    
+    missingFields.forEach((field, index) => {
+      helpMessage += `${index + 1}. ${field}\n`;
+    });
+    
+    helpMessage += `\n**💡 Para completar tu solicitud, proporciona:**\n`;
+    helpMessage += `- Datos administrativos básicos\n`;
+    helpMessage += `- Fechas específicas en formato DD/MM/YYYY\n`;
+    helpMessage += `- Ubicación exacta (torre + salón)\n`;
+    helpMessage += `- Tu información de contacto completa\n\n`;
+    helpMessage += `*Nota: Los detalles técnicos (tipo de fotos, ángulos, etc.) se definirán en reuniones posteriores con el equipo técnico.*`;
+    
+    return helpMessage;
+  }
+
+  // Generar datos estructurados de la conversación con validación
+  async extractDataForPDF(): Promise<{ data: ExtractedActivityData | null; validation: { isValid: boolean; missingFields: string[] } }> {
+    try {
+      console.log('🔄 Extrayendo datos estructurados para PDF...');
+      
+      // Usar el método de extracción granular
+      const structuredData = await groqService.extractStructuredData();
+      
+      console.log('📊 Datos extraídos:', structuredData);
+      
+      // Validar completitud
+      const validation = this.validateDataCompleteness(structuredData);
+      
+      if (!validation.isValid) {
+        console.warn('⚠️ Datos incompletos:', validation.missingFields);
+      } else {
+        console.log('✅ Datos completos y válidos');
+      }
+      
+      return { data: structuredData, validation };
       
     } catch (error) {
       console.error('❌ Error extrayendo datos para PDF:', error);
@@ -157,6 +274,68 @@ return { data: structuredData, validation };
             
             .data-table tr:nth-child(even) {
                 background: #f9fafb;
+            }
+            
+            /* Servicios estructurados */
+            .services-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 12px;
+                margin-bottom: 15px;
+            }
+            
+            .service-category {
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                padding: 12px;
+                background: #f9fafb;
+            }
+            
+            .service-category-title {
+                font-weight: bold;
+                color: #1e40af;
+                font-size: 12px;
+                margin-bottom: 8px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 4px;
+            }
+            
+            .service-item {
+                display: flex;
+                align-items: center;
+                margin-bottom: 4px;
+                font-size: 11px;
+            }
+            
+            .service-checkbox {
+                width: 12px;
+                height: 12px;
+                border: 1px solid #9ca3af;
+                margin-right: 6px;
+                flex-shrink: 0;
+                display: inline-block;
+            }
+            
+            .service-checkbox.checked {
+                background: #10b981;
+                border-color: #10b981;
+                position: relative;
+            }
+            
+            .service-checkbox.checked:after {
+                content: '✓';
+                color: white;
+                font-size: 8px;
+                position: absolute;
+                top: -1px;
+                left: 2px;
+            }
+            
+            .service-details {
+                font-size: 10px;
+                color: #6b7280;
+                margin-left: 18px;
+                font-style: italic;
             }
             
             /* Footer */
@@ -611,9 +790,9 @@ return { data: structuredData, validation };
                 </div>`;
   }
 
-  // Generar sección de servicios
+  // Generar sección de servicios ESTRUCTURADOS
   private generateServicesSection(services: any): string {
-    if (!services || (!services.mainServices?.length && !Object.keys(services.subServices || {}).length)) {
+    if (!services) {
       return `
                 <div class="section">
                     <div class="section-title">⚙️ SERVICIOS SOLICITADOS</div>
@@ -621,53 +800,139 @@ return { data: structuredData, validation };
                 </div>`;
     }
 
-    const serviceLabels: Record<string, string> = {
-      'audiovisual': 'Producción Audiovisual',
-      'academic': 'Apoyo Académico',
-      'content': 'Creación de Contenido'
+    // Definición de todos los servicios disponibles con estructura
+    const availableServices = {
+      video: {
+        name: 'Grabación de Video',
+        category: 'Producción Audiovisual',
+        icon: '🎥'
+      },
+      audio: {
+        name: 'Grabación de Audio',
+        category: 'Producción Audiovisual',
+        icon: '🎵'
+      },
+      photography: {
+        name: 'Fotografía',
+        category: 'Producción Audiovisual',
+        icon: '📸'
+      },
+      streaming: {
+        name: 'Transmisión en Vivo',
+        category: 'Producción Audiovisual',
+        icon: '📡'
+      },
+      editing: {
+        name: 'Edición de Video',
+        category: 'Postproducción',
+        icon: '✂️'
+      },
+      design: {
+        name: 'Diseño Gráfico',
+        category: 'Contenido Digital',
+        icon: '🎨'
+      },
+      animation: {
+        name: 'Animación',
+        category: 'Contenido Digital',
+        icon: '🎬'
+      },
+      social: {
+        name: 'Contenido para Redes',
+        category: 'Contenido Digital',
+        icon: '📱'
+      }
     };
 
-    const subServiceLabels: Record<string, string> = {
-      'video': 'Grabación de Video',
-      'audio': 'Grabación de Audio',
-      'editing': 'Edición de Video',
-      'streaming': 'Transmisión en vivo',
-      'photography': 'Fotografía',
-      'classroom': 'Apoyo en Aula',
-      'workshop': 'Talleres Prácticos',
-      'material': 'Material Didáctico',
-      'graphic': 'Diseño Gráfico',
-      'web': 'Diseño Web',
-      'social': 'Contenido para Redes Sociales',
-      'animation': 'Animación'
-    };
-
-    let servicesContent = '';
+    // Organizar servicios por categorías
+    const servicesByCategory: { [key: string]: any[] } = {};
     
-    if (services.mainServices && services.mainServices.length > 0) {
-      services.mainServices.forEach((mainServiceId: string) => {
-        const serviceName = serviceLabels[mainServiceId] || mainServiceId;
-        const subServices = services.subServices?.[mainServiceId] || [];
+    // Procesar servicios estructurados
+    if (services.mainServices && Array.isArray(services.mainServices)) {
+      services.mainServices.forEach((serviceId: string) => {
+        const subServices = services.subServices?.[serviceId] || [];
         
-        const subServicesList = subServices.map((subId: string) => 
-          `<li style="padding: 2px 0;">${subServiceLabels[subId] || subId}</li>`
-        ).join('');
-
-        servicesContent += `
-                    <div class="info-item">
-                        <div class="info-label">${serviceName}</div>
-                        <div class="info-value">
-                            ${subServices.length > 0 ? `<ul style="list-style: disc; margin-left: 15px; font-size: 11px;">${subServicesList}</ul>` : 'Servicio principal seleccionado'}
-                        </div>
-                    </div>`;
+        subServices.forEach((subServiceId: string) => {
+          const serviceInfo = availableServices[subServiceId as keyof typeof availableServices];
+          if (serviceInfo) {
+            const category = serviceInfo.category;
+            if (!servicesByCategory[category]) {
+              servicesByCategory[category] = [];
+            }
+            servicesByCategory[category].push({
+              id: subServiceId,
+              name: serviceInfo.name,
+              icon: serviceInfo.icon,
+              requested: true,
+              details: services.details?.[subServiceId] || null
+            });
+          }
+        });
       });
     }
+
+    // Si no hay servicios estructurados, intentar extraer de servicios básicos
+    if (Object.keys(servicesByCategory).length === 0 && services.mainServices) {
+      const defaultCategory = 'Servicios Generales';
+      servicesByCategory[defaultCategory] = services.mainServices.map((service: string) => ({
+        id: service,
+        name: service,
+        icon: '⚙️',
+        requested: true,
+        details: null
+      }));
+    }
+
+    // Agregar servicios no solicitados pero relevantes para mostrar completitud
+    Object.entries(availableServices).forEach(([serviceId, serviceInfo]) => {
+      const category = serviceInfo.category;
+      if (!servicesByCategory[category]) {
+        servicesByCategory[category] = [];
+      }
+      
+      const exists = servicesByCategory[category].some(s => s.id === serviceId);
+      if (!exists) {
+        servicesByCategory[category].push({
+          id: serviceId,
+          name: serviceInfo.name,
+          icon: serviceInfo.icon,
+          requested: false,
+          details: null
+        });
+      }
+    });
+
+    // Generar HTML por categorías
+    let categoriesHTML = '';
+    Object.entries(servicesByCategory).forEach(([category, categoryServices]) => {
+      const servicesHTML = categoryServices.map(service => {
+        const checkboxClass = service.requested ? 'service-checkbox checked' : 'service-checkbox';
+        const detailsHTML = service.details ? 
+          `<div class="service-details">${service.details}</div>` : '';
+        
+        return `
+                            <div class="service-item">
+                                <div class="${checkboxClass}"></div>
+                                <span>${service.icon} ${service.name}</span>
+                            </div>
+                            ${detailsHTML}`;
+      }).join('');
+
+      categoriesHTML += `
+                        <div class="service-category">
+                            <div class="service-category-title">${category}</div>
+                            ${servicesHTML}
+                        </div>`;
+    });
 
     return `
                 <div class="section">
                     <div class="section-title">⚙️ SERVICIOS SOLICITADOS</div>
-                    <div class="info-grid single-col">
-                        ${servicesContent}
+                    <div class="services-grid">
+                        ${categoriesHTML}
+                    </div>
+                    <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 10px; color: #0c4a6e;">
+                        <strong>Nota:</strong> Los servicios marcados (✓) han sido solicitados. Los detalles técnicos específicos se coordinarán en reuniones posteriores con el equipo técnico de MediaLab.
                     </div>
                 </div>`;
   }
@@ -718,6 +983,50 @@ return { data: structuredData, validation };
                 </div>`;
   }
 
+  // Método alternativo para generar PDF (usando window.print)
+  private generatePDFAlternative(htmlContent: string, requestId: string, activityType: string): void {
+    try {
+      // Crear ventana nueva para imprimir
+      const printWindow = window.open('', '_blank');
+      
+      if (!printWindow) {
+        throw new Error('No se pudo abrir ventana para impresión. Verifica que no esté bloqueada por el navegador.');
+      }
+
+      // Escribir contenido HTML
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+
+      // Configurar título de la ventana
+      printWindow.document.title = `Solicitud_MediaLab_${requestId}_${activityType}`;
+
+      // Esperar a que cargue y luego imprimir
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      };
+
+      console.log('✅ Ventana de impresión abierta exitosamente');
+      
+    } catch (error) {
+      console.error('❌ Error abriendo ventana de impresión:', error);
+      throw new Error(`Error técnico: ${error instanceof Error ? error.message : 'Problema desconocido'}`);
+    }
+  }
+
+  // Verificar si se puede generar PDF
+  canGeneratePDF(): boolean {
+    // Verificar que hay suficiente conversación
+    const conversation = groqService.getConversationHistory();
+    const userMessages = conversation.filter(msg => msg.role === 'user').length;
+    
+    console.log(`📊 Mensajes de usuario en conversación: ${userMessages}`);
+    
+    // Necesita al menos 3 intercambios sustanciales
+    return userMessages >= 3;
+  }
+
   // Generar y descargar PDF con mejor manejo de errores
   async generateAndDownloadPDF(): Promise<string> {
     try {
@@ -752,121 +1061,15 @@ return { data: structuredData, validation };
       
       if (error instanceof Error && error.message.includes('❌')) {
         // Error con mensaje de ayuda formateado
-        return error.message;// src/services/pdfGenerator.ts
-import { groqService, type ExtractedActivityData } from './groqService';
-
-class PDFGenerator {
-  
-  // Validar qué datos faltan específicamente
-  private validateDataCompleteness(data: ExtractedActivityData | null): { isValid: boolean; missingFields: string[] } {
-    const missingFields: string[] = [];
-    
-    if (!data) {
-      return { isValid: false, missingFields: ['No se pudieron extraer datos de la conversación'] };
-    }
-
-    // Validaciones comunes para todos los tipos
-    if (!data.requester?.name || data.requester.name === 'No especificado') {
-      missingFields.push('Nombre completo del solicitante');
-    }
-    
-    if (!data.requester?.email || data.requester.email === 'No especificado') {
-      missingFields.push('Correo electrónico institucional');
-    }
-    
-    if (!data.requester?.department || data.requester.department === 'No especificado') {
-      missingFields.push('Departamento/Facultad del solicitante');
-    }
-
-    // Validaciones específicas por tipo
-    switch (data.type) {
-      case 'single':
-        if (!data.activityName || data.activityName === 'No especificado') {
-          missingFields.push('Nombre específico de la actividad');
-        }
-        if (!data.faculty || data.faculty === 'No especificado') {
-          missingFields.push('Facultad responsable');
-        }
-        if (!data.date || data.date === 'No especificado') {
-          missingFields.push('Fecha específica (DD/MM/YYYY)');
-        }
-        if (!data.startTime || data.startTime === 'No especificado') {
-          missingFields.push('Hora de inicio');
-        }
-        if (!data.endTime || data.endTime === 'No especificado') {
-          missingFields.push('Hora de fin');
-        }
-        if (!data.location?.type || data.location.type === 'No especificado') {
-          missingFields.push('Tipo de ubicación');
-        }
-        if (data.location?.type === 'university' && (!data.location.tower || !data.location.classroom)) {
-          missingFields.push('Torre y salón específicos');
-        }
-        if (data.location?.type === 'external' && !data.location.externalAddress) {
-          missingFields.push('Dirección externa completa');
-        }
-        break;
-        
-      case 'recurrent':
-        if (!data.activityName || data.activityName === 'No especificado') {
-          missingFields.push('Nombre de la actividad recurrente');
-        }
-        if (!data.recurrence?.startDate || !data.recurrence?.endDate) {
-          missingFields.push('Fechas de inicio y fin del periodo');
-        }
-        break;
-        
-      case 'podcast':
-        if (!data.podcastName || data.podcastName === 'No especificado') {
-          missingFields.push('Nombre del podcast');
-        }
-        break;
-        
-      case 'course':
-        if (!data.careerName || data.careerName === 'No especificado') {
-          missingFields.push('Nombre de la carrera');
-        }
-        break;
-    }
-
-    return { isValid: missingFields.length === 0, missingFields };
-  }
-
-  // Generar mensaje de ayuda específico
-  private generateHelpMessage(missingFields: string[]): string {
-    let helpMessage = `❌ **No se puede generar el PDF - Información faltante:**\n\n`;
-    
-    missingFields.forEach((field, index) => {
-      helpMessage += `${index + 1}. ${field}\n`;
-    });
-    
-    helpMessage += `\n**💡 Para completar tu solicitud, proporciona:**\n`;
-    helpMessage += `- Datos administrativos básicos\n`;
-    helpMessage += `- Fechas específicas en formato DD/MM/YYYY\n`;
-    helpMessage += `- Ubicación exacta (torre + salón)\n`;
-    helpMessage += `- Tu información de contacto completa\n\n`;
-    helpMessage += `*Nota: Los detalles técnicos (tipo de fotos, ángulos, etc.) se definirán en reuniones posteriores con el equipo técnico.*`;
-    
-    return helpMessage;
-  }
-
-  // Generar datos estructurados de la conversación con validación
-  async extractDataForPDF(): Promise<{ data: ExtractedActivityData | null; validation: { isValid: boolean; missingFields: string[] } }> {
-    try {
-      console.log('🔄 Extrayendo datos estructurados para PDF...');
-      
-      // Usar el método de extracción granular
-      const structuredData = await groqService.extractStructuredData();
-      
-      console.log('📊 Datos extraídos:', structuredData);
-      
-      // Validar completitud
-      const validation = this.validateDataCompleteness(structuredData);
-      
-      if (!validation.isValid) {
-        console.warn('⚠️ Datos incompletos:', validation.missingFields);
+        return error.message;
       } else {
-        console.log('✅ Datos completos y válidos');
+        // Error técnico inesperado
+        return `❌ **Error técnico inesperado**\n\n${error instanceof Error ? error.message : 'Error desconocido'}\n\nPor favor intenta nuevamente o contacta soporte si el problema persiste.`;
       }
-      
-      return {
+    }
+  }
+}
+
+// Exportar instancia singleton
+export const pdfGenerator = new PDFGenerator();
+export default PDFGenerator;
