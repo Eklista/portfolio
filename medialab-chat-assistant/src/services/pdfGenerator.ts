@@ -1,5 +1,6 @@
 // src/services/pdfGenerator.ts
 import { groqService, type ExtractedActivityData } from './groqService';
+import { getDepartmentById } from '../data';
 
 class PDFGenerator {
   
@@ -20,7 +21,7 @@ class PDFGenerator {
       missingFields.push('Correo electrónico institucional');
     }
     
-    if (!data.requester?.department || data.requester.department === 'No especificado') {
+    if (!data.requester?.department_id || data.requester.department_id === 0) {
       missingFields.push('Departamento/Facultad del solicitante');
     }
 
@@ -30,7 +31,7 @@ class PDFGenerator {
         if (!data.activityName || data.activityName === 'No especificado') {
           missingFields.push('Nombre específico de la actividad');
         }
-        if (!data.faculty || data.faculty === 'No especificado') {
+        if (!data.department_id || data.department_id === 0) {
           missingFields.push('Facultad responsable');
         }
         if (!data.date || data.date === 'No especificado') {
@@ -439,6 +440,9 @@ class PDFGenerator {
 
   // Generar contenido para actividad única
   private generateSingleActivityContent(data: any): string {
+    const department = getDepartmentById(data.department_id);
+    const departmentName = data.department_name || department?.name || 'No especificado';
+    
     return `
             <div class="section activity-single">
                 <div class="section-title">📋 ACTIVIDAD ÚNICA</div>
@@ -449,7 +453,7 @@ class PDFGenerator {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Facultad Responsable</div>
-                        <div class="info-value">${data.faculty || 'No especificado'}</div>
+                        <div class="info-value">${departmentName}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">Fecha del Evento</div>
@@ -477,6 +481,9 @@ class PDFGenerator {
 
   // Generar contenido para actividad recurrente  
   private generateRecurrentActivityContent(data: any): string {
+    const department = getDepartmentById(data.department_id);
+    const departmentName = data.department_name || department?.name || 'No especificado';
+    
     return `
             <div class="section activity-recurrent">
                 <div class="section-title">🔄 ACTIVIDAD RECURRENTE</div>
@@ -487,7 +494,7 @@ class PDFGenerator {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Facultad Responsable</div>
-                        <div class="info-value">${data.faculty || 'No especificado'}</div>
+                        <div class="info-value">${departmentName}</div>
                     </div>
                 </div>
                 
@@ -508,6 +515,9 @@ class PDFGenerator {
 
   // Generar contenido para podcast
   private generatePodcastContent(data: any): string {
+    const department = getDepartmentById(data.department_id);
+    const departmentName = data.department_name || department?.name || 'No especificado';
+    
     return `
             <div class="section activity-podcast">
                 <div class="section-title">🎙️ PODCAST</div>
@@ -518,7 +528,7 @@ class PDFGenerator {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Facultad Principal</div>
-                        <div class="info-value">${data.faculty || 'No especificado'}</div>
+                        <div class="info-value">${departmentName}</div>
                     </div>
                 </div>
                 
@@ -541,6 +551,9 @@ class PDFGenerator {
 
   // Generar contenido para cursos
   private generateCourseContent(data: any): string {
+    const department = getDepartmentById(data.department_id);
+    const departmentName = data.department_name || department?.name || 'No especificado';
+    
     return `
             <div class="section activity-course">
                 <div class="section-title">📚 CURSOS / CARRERA</div>
@@ -551,7 +564,7 @@ class PDFGenerator {
                     </div>
                     <div class="info-item">
                         <div class="info-label">Facultad Principal</div>
-                        <div class="info-value">${data.faculty || 'No especificado'}</div>
+                        <div class="info-value">${departmentName}</div>
                     </div>
                 </div>
                 
@@ -947,6 +960,9 @@ class PDFGenerator {
                 </div>`;
     }
 
+    const department = getDepartmentById(requester.department_id);
+    const departmentName = requester.department_name || department?.name || 'No especificado';
+
     return `
                 <div class="section">
                     <div class="section-title">👤 DATOS DEL SOLICITANTE</div>
@@ -957,7 +973,7 @@ class PDFGenerator {
                         </div>
                         <div class="info-item">
                             <div class="info-label">Departamento/Facultad</div>
-                            <div class="info-value">${requester.department || 'No especificado'}</div>
+                            <div class="info-value">${departmentName}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">Correo Electrónico</div>
