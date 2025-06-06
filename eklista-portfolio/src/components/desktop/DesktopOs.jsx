@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Folder, Taskbar } from '..';
 import ModernChat from '../chat/ModernChat';
+import PreQuoteForm from '../chat/PreQuoteForm'; // ✅ NUEVO IMPORT
 import WindowExplorer from './WindowExplorer';
 import WindowInfo from './WindowInfo';
 import WindowContact from './WindowContact';
@@ -26,6 +27,8 @@ const DesktopOS = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [preQuoteData, setPreQuoteData] = useState(null); // ✅ NUEVO ESTADO
+  const [isPreQuoteOpen, setIsPreQuoteOpen] = useState(false); // ✅ NUEVO ESTADO
 
   // Auto-abrir chat en desktop
   useEffect(() => {
@@ -115,7 +118,8 @@ const DesktopOS = () => {
         explorer: { width: Math.min(1200, screenWidth - 200), height: Math.min(800, screenHeight - 200) },
         contact: { width: Math.min(1000, screenWidth - 200), height: Math.min(700, screenHeight - 200) },
         info: { width: Math.min(1000, screenWidth - 200), height: Math.min(750, screenHeight - 200) },
-        quote: { width: Math.min(1300, screenWidth - 120), height: Math.min(850, screenHeight - 100) }
+        quote: { width: Math.min(1300, screenWidth - 120), height: Math.min(850, screenHeight - 100) },
+        prequote: { width: Math.min(1100, screenWidth - 120), height: Math.min(750, screenHeight - 100) } // ✅ NUEVO
       };
       
       const config = configs[category] || configs.explorer;
@@ -230,6 +234,34 @@ const DesktopOS = () => {
     };
     
     setOpenWindows([...openWindows, quoteWindow]);
+  };
+
+  // ✅ NUEVA FUNCIÓN PARA ABRIR PREQUOTE DESDE EL CHAT
+  const openPreQuoteWindow = (conversationData) => {
+    console.log('🚀 Abriendo PreQuoteForm con datos:', conversationData);
+    
+    setPreQuoteData(conversationData);
+    setIsPreQuoteOpen(true);
+    
+    // Opcional: Minimizar el chat cuando se abre el formulario
+    setChatMinimized(true);
+  };
+
+  // ✅ FUNCIÓN PARA CERRAR PREQUOTE
+  const closePreQuote = () => {
+    setIsPreQuoteOpen(false);
+    setPreQuoteData(null);
+  };
+
+  // ✅ FUNCIÓN PARA MANEJAR ENVÍO DE PREQUOTE
+  const handlePreQuoteSubmit = async (formData) => {
+    console.log('📝 Datos de precotización enviados:', formData);
+    
+    // Aquí puedes agregar la lógica para enviar los datos
+    // Por ejemplo, llamada a API, email, etc.
+    
+    // Simular envío exitoso
+    return Promise.resolve();
   };
 
   const bringToFront = (windowId) => {
@@ -360,7 +392,7 @@ const DesktopOS = () => {
         </div>
       </div>
 
-      {/* ✅ MODERN CHAT CON onOpenQuote */}
+      {/* ✅ MODERN CHAT CON CALLBACKS ACTUALIZADOS */}
       <ModernChat
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
@@ -368,7 +400,29 @@ const DesktopOS = () => {
         isMinimized={chatMinimized}
         isMobile={isMobile}
         onOpenQuote={openQuoteWindow}
+        onOpenPreQuote={openPreQuoteWindow} // ✅ NUEVO CALLBACK
       />
+
+      {/* ✅ PREQUOTE FORM COMO VENTANA INDEPENDIENTE */}
+      <AnimatePresence>
+        {isPreQuoteOpen && preQuoteData && (
+          <PreQuoteForm
+            isOpen={isPreQuoteOpen}
+            onClose={closePreQuote}
+            onMinimize={() => setIsPreQuoteOpen(false)} // Simplificado para esta versión
+            onMaximize={() => {}} // Placeholder
+            conversationData={preQuoteData}
+            onSubmit={handlePreQuoteSubmit}
+            isMobile={isMobile}
+            window={{
+              windowId: 'prequote-form',
+              zIndex: 1000, // Alto para estar encima
+              isMaximized: false
+            }}
+            onBringToFront={() => {}} // Placeholder
+          />
+        )}
+      </AnimatePresence>
 
       {/* Windows - Renderizado dinámico según tipo */}
       <AnimatePresence>

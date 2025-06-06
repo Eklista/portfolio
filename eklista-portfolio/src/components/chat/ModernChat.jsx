@@ -1,4 +1,4 @@
-// src/components/chat/ModernChat.jsx - UI ARREGLADO
+// src/components/chat/ModernChat.jsx - OPTIMIZADO para nuevo flujo directo
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -12,7 +12,10 @@ import {
   Loader2,
   Zap,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import chatAI from '../../services/groqChatAI';
@@ -23,16 +26,17 @@ const ModernChat = ({
   onMinimize, 
   isMinimized = false,
   isMobile = false,
-  onOpenQuote
+  onOpenQuote,
+  onOpenPreQuote // ✅ NUEVO: Callback para abrir PreQuoteForm
 }) => {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentInput, setCurrentInput] = useState('');
   const [aiStatus, setAiStatus] = useState('checking');
   const [sessionState, setSessionState] = useState(null);
-  // ✅ REMOVIDO: Quick Actions eliminadas completamente
+  const [showQuoteButton, setShowQuoteButton] = useState(false); // ✅ NUEVO: Para mostrar botón formulario
   const messagesEndRef = useRef(null);
-  const inputRef = useRef(null); // ✅ NUEVO: Referencia al input
+  const inputRef = useRef(null);
 
   // ✅ VERIFICAR ESTADO DE GROQ AL INICIALIZAR
   useEffect(() => {
@@ -56,15 +60,14 @@ const ModernChat = ({
     }
   }, [isOpen]);
 
-  // ✅ AUTO-FOCUS AL INPUT cuando se abre
+  // ✅ AUTO-FOCUS AL INPUT
   useEffect(() => {
     if (isOpen && !isMinimized && inputRef.current) {
-      // Pequeño delay para asegurar que el componente se renderizó
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen, isMinimized]); // ✅ REMOVIDO: showQuickActions
+  }, [isOpen, isMinimized]);
 
   // ✅ INICIALIZAR CONVERSACIÓN AUTOMÁTICAMENTE
   useEffect(() => {
@@ -80,16 +83,41 @@ const ModernChat = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ✅ REMOVIDO: Control de Quick Actions eliminado
-
-  // ✅ NUEVA LÓGICA DE PROCESAMIENTO SIN QUICK ACTIONS
+  // ✅ LÓGICA DE PROCESAMIENTO OPTIMIZADA
   const handleSendMessage = async (content, isAutomatic = false) => {
-    // ✅ ENFOCAR INPUT DESPUÉS DE ENVIAR
     const focusInput = () => {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     };
+
+    // ✅ DETECTAR COMANDO "VER FORMULARIO"
+    if (!isAutomatic && content.toLowerCase().includes('ver formulario')) {
+      setShowQuoteButton(true);
+      const userMessage = {
+        id: Date.now(),
+        type: 'user',
+        content,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
+      setCurrentInput('');
+      
+      const systemMessage = {
+        id: Date.now() + 1,
+        type: 'system',
+        content: '📝 Formulario de cotización disponible',
+        timestamp: new Date(),
+        showQuoteButton: true
+      };
+      
+      setTimeout(() => {
+        setMessages(prev => [...prev, systemMessage]);
+        focusInput();
+      }, 500);
+      
+      return;
+    }
 
     if (!isAutomatic) {
       const userMessage = {
@@ -117,7 +145,8 @@ const ModernChat = ({
         timestamp: new Date(),
         aiPowered: aiResponse.source === 'groq',
         source: aiResponse.source,
-        sessionStage: newSessionState.conversationStage
+        sessionStage: newSessionState.conversationStage,
+        sessionData: newSessionState // ✅ NUEVO: Datos completos de sesión
       };
 
       const delay = aiResponse.source === 'groq' ? 1500 : 800;
@@ -125,15 +154,21 @@ const ModernChat = ({
       setTimeout(() => {
         setMessages(prev => [...prev, botMessage]);
         setIsTyping(false);
-        focusInput(); // ✅ RECUPERAR FOCUS
+        focusInput();
 
-        // ✅ DETECTAR SI DEBE ABRIR COTIZADOR
-        if (newSessionState.conversationStage === 'pricing' && 
-            (aiResponse.content.toLowerCase().includes('cotizador') || 
-             aiResponse.content.toLowerCase().includes('detallado'))) {
+        // ✅ DETECTAR SI DEBE ABRIR PREQUOTEFORM
+        if (newSessionState.shouldOpenPreQuote && onOpenPreQuote) {
           setTimeout(() => {
-            openQuoteWithBrief(newSessionState.briefData);
-          }, 2000);
+            const preQuoteData = chatAI.getPreQuoteData();
+            onOpenPreQuote(preQuoteData);
+            chatAI.resetPreQuoteFlag(); // Reset flag después de abrir
+          }, 1500);
+        }
+
+        // ✅ DETECTAR SI MENCIONA FORMULARIO (sin abrir automáticamente)
+        if (aiResponse.content.toLowerCase().includes('formulario') && 
+            !aiResponse.content.toLowerCase().includes('ver formulario')) {
+          setShowQuoteButton(true);
         }
       }, delay);
 
@@ -159,31 +194,62 @@ const ModernChat = ({
       setTimeout(() => {
         setMessages(prev => [...prev, errorMessage]);
         setIsTyping(false);
-        focusInput(); // ✅ RECUPERAR FOCUS
+        focusInput();
       }, 1000);
     }
   };
 
-  // ✅ ABRIR COTIZADOR CON DATOS DEL BRIEF
-  const openQuoteWithBrief = (briefData) => {
-    if (onOpenQuote) {
-      const mappedData = {
-        projectType: briefData.projectType,
-        features: briefData.features,
-        businessType: briefData.businessType,
-        contactInfo: {
-          name: sessionState?.userName || '',
-          email: '',
-          company: '',
-          description: `Brief del chat: ${briefData.features.join(', ')}`
+  // ✅ OBTENER PLACEHOLDER DINÁMICO SEGÚN ETAPA
+  const getPlaceholder = () => {
+    if (!sessionState) return "Escribe tu mensaje...";
+    
+    switch(sessionState.conversationStage) {
+      case 'greeting':
+        return sessionState.userName ? "Cuéntame más sobre tu proyecto..." : "Ej: Soy María y necesito una solución para...";
+      case 'brief':
+        if (!sessionState.briefData.projectType) {
+          return "Ej: Necesito un sitio web para...";
         }
-      };
-      
-      onOpenQuote(mappedData);
+        if (!sessionState.briefData.businessType) {
+          return "Ej: Es para mi restaurante...";
+        }
+        return "Características especiales...";
+      case 'estimate':
+        return 'Escribe "enviar" o "formulario"';
+      case 'contact_method':
+        return 'WhatsApp, Email o Llamada...';
+      case 'final':
+        return "¿Algo más en lo que pueda ayudarte?";
+      default:
+        return "Escribe tu mensaje...";
     }
   };
 
-  // ✅ REMOVIDO: Quick Actions eliminadas
+  // ✅ OBTENER ESTADO DE PROGRESO
+  const getProgressInfo = () => {
+    if (!sessionState) return { text: 'Conectando...', progress: 0 };
+    
+    const { conversationStage, questionCount, maxQuestions } = sessionState;
+    
+    switch(conversationStage) {
+      case 'greeting':
+        return { text: 'Presentación', progress: 20 };
+      case 'brief':
+        const briefProgress = 20 + ((questionCount / maxQuestions) * 40);
+        return { 
+          text: `Brief (${questionCount}/${maxQuestions})`, 
+          progress: Math.min(briefProgress, 60) 
+        };
+      case 'estimate':
+        return { text: 'Cotización lista', progress: 80 };
+      case 'contact_method':
+        return { text: 'Datos de contacto', progress: 90 };
+      case 'final':
+        return { text: 'Completado', progress: 100 };
+      default:
+        return { text: 'En proceso', progress: 0 };
+    }
+  };
 
   // Cerrar con ESC
   useEffect(() => {
@@ -198,6 +264,8 @@ const ModernChat = ({
 
   if (!isOpen) return null;
 
+  const progressInfo = getProgressInfo();
+
   // ✅ RENDER MÓVIL MEJORADO
   if (isMobile) {
     return (
@@ -208,7 +276,7 @@ const ModernChat = ({
         exit={{ opacity: 0, y: '100%' }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        {/* Header móvil */}
+        {/* Header móvil mejorado */}
         <div className="bg-secondary border-b border-primary px-4 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
@@ -229,11 +297,17 @@ const ModernChat = ({
                   aiStatus === 'checking' ? 'bg-yellow-400' : 'bg-blue-400'
                 }`}></div>
                 <span className="text-xs text-muted">
-                  {sessionState?.conversationStage === 'helping' ? 'Consultas' :
-                   sessionState?.conversationStage === 'briefing' ? 'Proyecto' :
-                   sessionState?.conversationStage === 'pricing' ? 'Cotización' :
-                   aiStatus === 'available' ? 'AI Listo' : 'Conectando...'}
+                  {progressInfo.text}
                 </span>
+                {/* ✅ BARRA DE PROGRESO */}
+                <div className="w-16 h-1 bg-surface rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-accent-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressInfo.progress}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -257,6 +331,24 @@ const ModernChat = ({
               />
             ))}
           </AnimatePresence>
+
+          {/* ✅ BOTÓN DE FORMULARIO CUANDO CORRESPONDE */}
+          {showQuoteButton && (
+            <motion.div
+              className="flex justify-center py-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <button
+                onClick={() => onOpenQuote && onOpenQuote()}
+                className="bg-accent-primary hover:bg-accent-secondary text-primary px-6 py-3 rounded-xl font-medium flex items-center space-x-2 transition-colors"
+              >
+                <FileText size={18} />
+                <span>Abrir Formulario Detallado</span>
+                <ExternalLink size={14} />
+              </button>
+            </motion.div>
+          )}
 
           {/* Typing indicator */}
           {isTyping && (
@@ -301,15 +393,13 @@ const ModernChat = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* ✅ REMOVIDO: Quick Actions eliminadas de móvil */}
-
-        {/* Input móvil */}
+        {/* Input móvil mejorado */}
         <div className="border-t border-primary bg-secondary flex-shrink-0">
           <div className="p-4">
             <div className="flex items-center space-x-3">
               <div className="flex-1 relative">
                 <textarea
-                  ref={inputRef} // ✅ REFERENCIA PARA FOCUS
+                  ref={inputRef}
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   onKeyPress={(e) => {
@@ -320,13 +410,7 @@ const ModernChat = ({
                       }
                     }
                   }}
-                  placeholder={
-                    sessionState?.conversationStage === 'greeting' 
-                      ? "Tu nombre..." 
-                      : sessionState?.conversationStage === 'briefing'
-                      ? "Cuéntame de tu proyecto..."
-                      : "Escribe tu mensaje..."
-                  }
+                  placeholder={getPlaceholder()} // ✅ PLACEHOLDER DINÁMICO
                   disabled={isTyping}
                   className="w-full bg-surface border-2 border-primary rounded-xl px-4 py-3 pr-12 text-secondary placeholder-muted focus:border-accent-primary focus:outline-none resize-none transition-all text-sm disabled:opacity-50 font-inter"
                   rows="1"
@@ -367,7 +451,7 @@ const ModernChat = ({
               </motion.button>
             </div>
 
-            {/* Status Info */}
+            {/* Status Info mejorado */}
             <div className="flex items-center justify-between mt-3 text-xs">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-1">
@@ -379,6 +463,16 @@ const ModernChat = ({
                     EKLISTA Chat {aiStatus === 'available' ? 'AI' : 'Online'}
                   </span>
                 </div>
+                
+                {/* ✅ INDICADOR DE PREGUNTAS RESTANTES */}
+                {sessionState?.conversationStage === 'brief' && (
+                  <div className="flex items-center space-x-1">
+                    <Clock size={12} className="text-accent-primary" />
+                    <span className="text-accent-primary font-inter">
+                      {sessionState.maxQuestions - sessionState.questionCount} preguntas restantes
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -408,7 +502,7 @@ const ModernChat = ({
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header desktop */}
+      {/* Header desktop mejorado */}
       <div className="bg-secondary border-b border-primary px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
@@ -423,22 +517,28 @@ const ModernChat = ({
             <h3 className="font-poppins font-bold text-primary text-sm">
               {sessionState?.userName ? `Hola ${sessionState.userName}!` : 'EKLISTA Chat'}
             </h3>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2">
               <div className={`w-1.5 h-1.5 rounded-full ${
                 aiStatus === 'available' ? 'bg-green-400' : 
                 aiStatus === 'checking' ? 'bg-yellow-400' : 'bg-blue-400'
               }`}></div>
               <span className="text-xs text-muted">
-                {sessionState?.conversationStage === 'helping' ? 'Consultas' :
-                 sessionState?.conversationStage === 'briefing' ? 'Proyecto' :
-                 sessionState?.conversationStage === 'pricing' ? 'Cotización' :
-                 'Asistente AI'}
+                {progressInfo.text}
               </span>
+              {/* ✅ MINI BARRA DE PROGRESO */}
+              <div className="w-12 h-1 bg-surface rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-accent-primary"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressInfo.progress}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Window controls simplificados */}
+        {/* Window controls */}
         <div className="flex items-center space-x-2">
           <button
             onClick={onMinimize}
@@ -470,6 +570,24 @@ const ModernChat = ({
             />
           ))}
         </AnimatePresence>
+
+        {/* ✅ BOTÓN DE FORMULARIO CUANDO CORRESPONDE */}
+        {showQuoteButton && (
+          <motion.div
+            className="flex justify-center py-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <button
+              onClick={() => onOpenQuote && onOpenQuote()}
+              className="bg-accent-primary hover:bg-accent-secondary text-primary px-4 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 transition-colors"
+            >
+              <FileText size={16} />
+              <span>Formulario Detallado</span>
+              <ExternalLink size={12} />
+            </button>
+          </motion.div>
+        )}
 
         {/* Typing indicator desktop */}
         {isTyping && (
@@ -512,15 +630,13 @@ const ModernChat = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ✅ REMOVIDO: Quick Actions eliminadas de desktop */}
-
-      {/* Input desktop */}
+      {/* Input desktop mejorado */}
       <div className="border-t border-primary bg-secondary/50 flex-shrink-0">
         <div className="p-4">
           <div className="flex items-center space-x-3">
             <div className="flex-1 relative">
               <textarea
-                ref={inputRef} // ✅ REFERENCIA PARA FOCUS
+                ref={inputRef}
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -531,13 +647,7 @@ const ModernChat = ({
                     }
                   }
                 }}
-                placeholder={
-                  sessionState?.conversationStage === 'greeting' 
-                    ? "Tu nombre..."
-                    : sessionState?.conversationStage === 'briefing'
-                    ? "Detalles de tu proyecto..."
-                    : "Pregúntame sobre mis servicios..."
-                }
+                placeholder={getPlaceholder()} // ✅ PLACEHOLDER DINÁMICO
                 disabled={isTyping}
                 className="w-full bg-surface border-2 border-primary rounded-xl px-4 py-3 pr-12 text-secondary placeholder-muted focus:border-accent-primary focus:outline-none resize-none transition-all text-sm disabled:opacity-50 font-inter"
                 rows="1"
@@ -590,6 +700,16 @@ const ModernChat = ({
                   EKLISTA Chat {aiStatus === 'available' ? 'AI' : 'Online'}
                 </span>
               </div>
+              
+              {/* ✅ INDICADOR DE PREGUNTAS RESTANTES */}
+              {sessionState?.conversationStage === 'brief' && (
+                <div className="flex items-center space-x-1">
+                  <Clock size={12} className="text-accent-primary" />
+                  <span className="text-accent-primary font-inter">
+                    {sessionState.maxQuestions - sessionState.questionCount} preguntas
+                  </span>
+                </div>
+              )}
               
               {isTyping && (
                 <div className="flex items-center space-x-1">

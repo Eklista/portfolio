@@ -1,4 +1,4 @@
-// src/services/groqChatAI.js - ARREGLADO: Memoria persistente + Contexto claro
+// src/services/groqChatAI.js - IA REAL: Sin detectores manuales, pura inteligencia artificial
 import { projectTypes, calculateTotalPrice, formatPrice } from '../data/pricing.js';
 import { explorerStructure, projectsData } from '../data/projects.js';
 
@@ -6,21 +6,21 @@ class EklistaChatAI {
   constructor() {
     this.isInitialized = false;
     this.groq = null;
-    this.conversationHistory = []; // ✅ NUEVA: Historial completo de conversación
+    this.conversationHistory = [];
     this.sessionState = {
       userName: null,
-      hasAskedName: false,
-      conversationStage: 'greeting',
+      conversationStage: 'greeting', // greeting -> brief -> estimate -> pre_quote_ready -> final
       briefData: {
-        projectType: null,
-        businessType: null,
-        features: [],
-        budget: null,
-        timeline: null,
-        needsHelp: false
+        summary: '', // ✅ NUEVO: Resumen libre de lo que entendió la IA
+        projectType: null, // Solo para calcular precio al final
+        estimate: null,
+        aiAnalysis: '' // ✅ NUEVO: Análisis detallado para el formulario
       },
-      messageCount: 0,
-      lastResponse: null // Para evitar repeticiones
+      contactMethod: null,
+      contactInfo: {},
+      questionCount: 0,
+      maxQuestions: 3,
+      shouldOpenPreQuote: false // ✅ NUEVO: Flag para abrir PreQuoteForm
     };
     this.initializeGroq();
   }
@@ -33,14 +33,13 @@ class EklistaChatAI {
         dangerouslyAllowBrowser: true
       });
       this.isInitialized = true;
-      console.log('✅ Groq inicializado correctamente');
+      console.log('✅ Groq IA Real inicializada');
     } catch (error) {
-      console.warn('⚠️ Groq no disponible, usando respuestas predefinidas');
+      console.warn('⚠️ Groq no disponible, usando fallback básico');
       this.isInitialized = false;
     }
   }
 
-  // ✅ NUEVO: Agregar mensaje al historial
   addToHistory(role, content) {
     this.conversationHistory.push({
       role,
@@ -49,276 +48,136 @@ class EklistaChatAI {
       stage: this.sessionState.conversationStage
     });
     
-    // Mantener solo últimos 10 mensajes para no exceder límites
-    if (this.conversationHistory.length > 20) {
-      this.conversationHistory = this.conversationHistory.slice(-20);
+    // Mantener historial relevante
+    if (this.conversationHistory.length > 12) {
+      this.conversationHistory = this.conversationHistory.slice(-12);
     }
   }
 
-  // ✅ NUEVO: Obtener contexto de conversación
   getConversationContext() {
     if (this.conversationHistory.length === 0) return '';
     
-    let context = '\n\nHISTORIAL DE CONVERSACIÓN:\n';
-    this.conversationHistory.slice(-6).forEach(msg => {
+    let context = '\n\nCONVERSACIÓN HASTA AHORA:\n';
+    this.conversationHistory.forEach(msg => {
       context += `${msg.role.toUpperCase()}: ${msg.content}\n`;
     });
     
     return context;
   }
 
-  // Detectar nombre (mejorado)
-  extractNameFromMessage(message) {
-    const msg = message.trim();
+  // ✅ SISTEMA DE PROMPTS INTELIGENTE - DEJA QUE LA IA PIENSE
+  buildSmartPrompt() {
+    const { userName, conversationStage, questionCount, maxQuestions, briefData } = this.sessionState;
     
-    const namePatterns = [
-      /mi nombre es ([a-záéíóúñ\s]+)/i,
-      /me llamo ([a-záéíóúñ\s]+)/i,
-      /soy ([a-záéíóúñ\s]+)/i,
-      /^([a-záéíóúñ]+)$/i,
-    ];
+    let basePrompt = `Eres Pablo, diseñador web guatemalteco de EKLISTA. Eres inteligente, amigable y eficiente.
 
-    for (const pattern of namePatterns) {
-      const match = msg.match(pattern);
-      if (match && match[1]) {
-        const name = match[1].trim();
-        if (name.length > 1 && !['hola', 'hello', 'hi', 'buenas', 'que tal', 'precio', 'servicio'].includes(name.toLowerCase())) {
-          return name.split(' ')[0];
-        }
-      }
-    }
-    return null;
-  }
+SERVICIOS QUE OFRECES:
+• Diseño Gráfico/Branding: Desde ${formatPrice(500)} (logos, identidad visual)
+• Sitios WordPress: Desde ${formatPrice(1200)} (webs profesionales, portfolios)  
+• UX/UI Design: Desde ${formatPrice(800)} (interfaces, prototipos)
+• Desarrollo Custom: Desde ${formatPrice(4000)} (apps, sistemas complejos)
 
-  // Detectar intención de pricing
-  detectsPricingIntent(message) {
-    const pricingKeywords = [
-      'precio', 'costo', 'cuanto', 'cotiz', 'presupuesto', 
-      'tarifa', 'valor', 'cuesta', 'cobras', 'factur'
-    ];
-    
-    return pricingKeywords.some(keyword => 
-      message.toLowerCase().includes(keyword)
-    );
-  }
-
-  // Detectar tipo de proyecto
-  detectProjectType(message) {
-    const msg = message.toLowerCase();
-    
-    if (msg.includes('logo') || msg.includes('identidad') || msg.includes('marca') || msg.includes('branding')) {
-      return 'graphic-design';
-    }
-    if (msg.includes('pagina') || msg.includes('sitio') || msg.includes('web') || msg.includes('wordpress')) {
-      return 'wordpress';
-    }
-    if (msg.includes('app') || msg.includes('aplicacion') || msg.includes('sistema') || msg.includes('custom')) {
-      return 'custom-development';
-    }
-    if (msg.includes('diseño') || msg.includes('interfaz') || msg.includes('ux') || msg.includes('ui')) {
-      return 'ux-ui';
-    }
-    
-    return null;
-  }
-
-  // ✅ NUEVO: Sistema prompt MUCHO más claro y con memoria
-  buildSystemPrompt() {
-    const { userName, conversationStage, briefData } = this.sessionState;
-    
-    // ✅ INFORMACIÓN CORREGIDA DE PRECIOS
-    const servicesInfo = `
-SERVICIOS Y PRECIOS (EN QUETZALES GUATEMALTECOS):
-• Diseño Gráfico/Branding: Desde ${formatPrice(500)} 
-• Sitios WordPress: Desde ${formatPrice(1200)}
-• UX/UI Design: Desde ${formatPrice(800)}  
-• Desarrollo Custom: Desde ${formatPrice(4000)}
-
-EJEMPLOS DE PROYECTOS COMPLETADOS:
-• Banking Web App para FinTech (2024)
-• E-commerce Platform para Fashion Forward (2024)
-• Restaurant Website para Sabor Auténtico (2023)`;
-
-    let systemPrompt = `Eres Pablo de EKLISTA, diseñador web guatemalteco profesional pero amigable.
-
-${servicesInfo}
-
-DATOS DE SESIÓN ACTUAL:
+CONTEXTO DE SESIÓN:
 - Cliente: ${userName || 'Sin identificar'}
-- Etapa: ${conversationStage}
-- Proyecto detectado: ${briefData.projectType || 'No definido'}
-- Tipo de negocio: ${briefData.businessType || 'No definido'}
-- Características: ${briefData.features.join(', ') || 'Ninguna'}
+- Etapa actual: ${conversationStage}
+- Preguntas hechas: ${questionCount}/${maxQuestions}
+- Resumen del proyecto: ${briefData.summary || 'Aún recopilando información'}
 
-CONTEXTO HISTÓRICO:${this.getConversationContext()}
+CONVERSACIÓN PREVIA:${this.getConversationContext()}
 
 INSTRUCCIONES ESPECÍFICAS PARA ESTA ETAPA:`;
 
-    // ✅ PROMPTS ESPECÍFICOS SIN REPETIR SALUDOS
-    if (conversationStage === 'greeting' && !userName) {
-      systemPrompt += `
-ETAPA: SALUDO INICIAL
-- Pregunta amablemente el nombre del usuario
-- NO digas "hola de nuevo" o "por acá de nuevo"
-- Sé directo: "¿Cómo te llamas?"`;
-      
-    } else if (conversationStage === 'helping') {
-      systemPrompt += `
-ETAPA: AYUDA GENERAL  
-- El usuario es ${userName}
-- Responde preguntas sobre servicios, portfolio, precios
-- SI mencionan precios/cotización, pasa a hacer preguntas sobre su proyecto
-- NO repitas saludos, ya se presentaron
-- Usa el nombre solo ocasionalmente, no en cada mensaje`;
-      
-    } else if (conversationStage === 'briefing') {
-      systemPrompt += `
-ETAPA: RECOLECTANDO INFORMACIÓN DEL PROYECTO
-- Ya sabes que es ${userName}
-- Haz 1-2 preguntas específicas sobre su proyecto
-- NO repitas información que ya tienes
-- Enfócate en completar el brief`;
-      
-    } else if (conversationStage === 'pricing') {
-      const estimate = this.calculateBriefEstimate(briefData);
-      systemPrompt += `
-ETAPA: COTIZACIÓN
-- Da precio estimado basado en la información recolectada
-- Estimación sugerida: ${estimate ? `${formatPrice(estimate.min)} - ${formatPrice(estimate.max)}` : 'Por definir'}
-- Ofrece continuar con cotizador detallado`;
+    switch(conversationStage) {
+      case 'greeting':
+        basePrompt += `
+ETAPA: SALUDO Y PRESENTACIÓN
+- Si es el primer mensaje, pregunta el nombre Y pide que cuente sobre su proyecto
+- Si te dan nombre + info del proyecto, extrae lo que puedas entender y haz UNA pregunta inteligente
+- NO uses frases robóticas o listas de opciones
+- Sé conversacional y natural`;
+        break;
+
+      case 'brief':
+        basePrompt += `
+ETAPA: RECOPILAR INFORMACIÓN (MÁXIMO ${maxQuestions} PREGUNTAS)
+- Ya hiciste ${questionCount} de ${maxQuestions} preguntas
+- Analiza lo que YA SABES de la conversación anterior
+- NO repitas preguntas sobre información que ya tienes
+- Haz UNA pregunta inteligente para completar el entendimiento
+- Si tienes suficiente información para dar un estimado, hazlo
+- Preguntas restantes: ${maxQuestions - questionCount}`;
+        break;
+
+      case 'estimate':
+        basePrompt += `
+ETAPA: DAR COTIZACIÓN FINAL
+- Analiza TODA la conversación para entender el proyecto
+- Da un rango de precio realista basado en lo conversado
+- IMPORTANTE: Aclara que NO incluye hosting
+- Explica que es solo un ESTIMADO (puede ser menos o más)
+- Menciona que Pablo revisará la solicitud y se comunicará para dudas
+- Al final, di que vas a abrir el formulario de precotización para completar datos
+- NO pidas datos de contacto manualmente, solo menciona que se abrirá el formulario`;
+        break;
+
+      case 'pre_quote_ready':
+        basePrompt += `
+ETAPA: PREPARAR FORMULARIO
+- Confirma que vas a abrir el formulario de precotización
+- Resume brevemente lo conversado
+- Menciona que el formulario ya viene pre-llenado con la información`;
+        break;
+
+      case 'final':
+        basePrompt += `
+ETAPA: CONFIRMACIÓN FINAL
+- Resume la información recopilada
+- Confirma que Pablo revisará la precotización y se comunicará pronto
+- Menciona el tiempo estimado de respuesta (24-48 horas)
+- Agradece y cierra profesionalmente`;
+        break;
     }
 
-    systemPrompt += `
+    basePrompt += `
 
-REGLAS IMPORTANTES:
-1. NO repitas saludos o presentaciones
-2. NO digas "hola de nuevo" o similares  
-3. USA el nombre del cliente solo cuando sea natural
-4. CUANDO MENCIONES PRECIOS, siempre usa formato de quetzales (Q1,200 NO "1200 proyectos")
-5. SÉ CONVERSACIONAL pero conciso
-6. RECUERDA el contexto de mensajes anteriores
-7. NO hagas las mismas preguntas dos veces`;
+REGLAS CRÍTICAS:
+1. PIENSA antes de responder - analiza qué información ya tienes
+2. NO hagas preguntas sobre cosas que ya sabes
+3. Sé inteligente - si alguien dice "soy fotógrafo y quiero mostrar mi trabajo" entiendes que quiere un portfolio
+4. Máximo ${maxQuestions} preguntas en brief, úsalas sabiamente
+5. Respuestas cortas y naturales (2-4 líneas máximo)
+6. Precios siempre en quetzales: Q1,200 no "1200"
+7. Si ya tienes suficiente info para estimar, hazlo aunque no hayas hecho todas las preguntas
+8. SIEMPRE aclara que precios NO incluyen hosting
+9. SIEMPRE menciona que es un estimado que puede variar
+10. En contacto, pide: presupuesto, datos completos y método preferido
 
-    return systemPrompt;
+IMPORTANTE: Eres una IA inteligente, no un bot con script. Adapta tus respuestas al contexto de la conversación.`;
+
+    return basePrompt;
   }
 
-  // Calcular estimación de precio
-  calculateBriefEstimate(briefData) {
-    const baseProject = projectTypes.find(pt => pt.id === briefData.projectType);
-    if (!baseProject) return null;
-
-    let estimatedPrice = baseProject.basePrice;
-    
-    if (briefData.features.includes('e-commerce') || briefData.features.includes('tienda')) {
-      estimatedPrice += 800;
-    }
-    if (briefData.features.includes('reservas') || briefData.features.includes('booking')) {
-      estimatedPrice += 400;
-    }
-    if (briefData.features.includes('multiidioma')) {
-      estimatedPrice += 600;
-    }
-    
-    const range = {
-      min: Math.round(estimatedPrice * 0.8),
-      max: Math.round(estimatedPrice * 1.3)
-    };
-    
-    return range;
-  }
-
-  // ✅ MÉTODO PRINCIPAL MEJORADO CON MEMORIA
+  // ✅ MÉTODO PRINCIPAL SIMPLIFICADO - DEJA QUE GROQ PIENSE
   async respond(userMessage) {
     try {
-      this.sessionState.messageCount++;
-      
-      // ✅ AGREGAR MENSAJE DEL USUARIO AL HISTORIAL
       if (userMessage !== 'inicio') {
         this.addToHistory('user', userMessage);
       }
-      
-      // 1. ETAPA GREETING - Capturar nombre
-      if (this.sessionState.conversationStage === 'greeting') {
-        if (!this.sessionState.hasAskedName && userMessage === 'inicio') {
-          this.sessionState.hasAskedName = true;
-          const response = `¡Hola! 👋 Soy Pablo de EKLISTA.
 
-¿Cómo te llamas? Me gusta conocer a las personas con las que trabajo 😊`;
-          
-          this.addToHistory('assistant', response);
-          return {
-            content: response,
-            source: 'greeting',
-            success: true
-          };
-        } else {
-          // Intentar extraer nombre
-          const extractedName = this.extractNameFromMessage(userMessage);
-          if (extractedName) {
-            this.sessionState.userName = extractedName;
-            this.sessionState.conversationStage = 'helping';
-            
-            const response = `¡Perfecto, ${extractedName}! 🚀 Encantado de conocerte.
-
-¿En qué puedo ayudarte hoy?
-
-🎨 **Servicios** - Desarrollo web, UX/UI, diseño gráfico
-📁 **Portfolio** - Ver mis trabajos anteriores  
-💰 **Precios** - Información de costos
-💬 **Pregunta libre** - Lo que tengas en mente`;
-
-            this.addToHistory('assistant', response);
-            return {
-              content: response,
-              source: 'name-captured',
-              success: true
-            };
-          } else {
-            const response = `No pude captar tu nombre bien 😅 ¿Podrías decírmelo de nuevo?
-
-Por ejemplo: "Me llamo María" o simplemente "Carlos"`;
-
-            this.addToHistory('assistant', response);
-            return {
-              content: response,
-              source: 'name-retry',
-              success: true
-            };
-          }
-        }
-      }
-
-      // 2. DETECTAR CAMBIO A ETAPA DE PRICING
-      if (this.detectsPricingIntent(userMessage) && this.sessionState.conversationStage === 'helping') {
-        this.sessionState.conversationStage = 'briefing';
-        
-        const projectType = this.detectProjectType(userMessage);
-        if (projectType) {
-          this.sessionState.briefData.projectType = projectType;
-        }
-      }
-
-      // 3. USAR GROQ O FALLBACK
+      // ✅ SOLO USAR IA - NO MÁS LÓGICA MANUAL
       if (!this.isInitialized || !this.groq) {
-        const response = this.getFallbackResponse(userMessage);
-        this.addToHistory('assistant', response);
-        return {
-          content: response,
-          source: 'fallback',
-          success: true
-        };
+        return this.getBasicFallback(userMessage);
       }
 
-      // 4. ✅ RESPUESTA CON GROQ + HISTORIAL COMPLETO
-      const systemPrompt = this.buildSystemPrompt();
+      // ✅ CONSTRUIR MENSAJES PARA GROQ
+      const systemPrompt = this.buildSmartPrompt();
       
-      // ✅ CREAR MENSAJES CON HISTORIAL COMPLETO
       const messages = [
         { role: "system", content: systemPrompt }
       ];
       
-      // Agregar historial reciente (últimos 8 mensajes)
-      const recentHistory = this.conversationHistory.slice(-8);
+      // Agregar conversación reciente
+      const recentHistory = this.conversationHistory.slice(-6);
       recentHistory.forEach(msg => {
         messages.push({
           role: msg.role === 'user' ? 'user' : 'assistant',
@@ -331,40 +190,41 @@ Por ejemplo: "Me llamo María" o simplemente "Carlos"`;
         messages.push({ role: "user", content: userMessage });
       }
 
+      // ✅ LLAMADA A GROQ SIN RESTRICCIONES
       const completion = await this.groq.chat.completions.create({
         messages,
         model: "llama3-70b-8192",
-        temperature: 0.6, // ✅ Bajado para más consistencia
-        max_tokens: 300, // ✅ Reducido para respuestas más concisas
-        top_p: 0.8
+        temperature: 0.7, // Un poco más de creatividad
+        max_tokens: 400,
+        top_p: 0.9
       });
 
-      const response = completion.choices[0]?.message?.content;
+      const aiResponse = completion.choices[0]?.message?.content;
       
-      if (!response) {
+      if (!aiResponse) {
         throw new Error('No response from Groq');
       }
 
-      // 5. ✅ AGREGAR RESPUESTA AL HISTORIAL Y ACTUALIZAR ESTADO
-      this.addToHistory('assistant', response);
-      this.updateSessionState(userMessage, response);
-      this.sessionState.lastResponse = response;
+      // ✅ ACTUALIZAR ESTADO BASADO EN LA RESPUESTA DE LA IA
+      await this.updateStateFromAIResponse(userMessage, aiResponse);
+      
+      this.addToHistory('assistant', aiResponse);
 
       return {
-        content: response,
-        source: 'groq',
+        content: aiResponse,
+        source: 'groq-real-ai',
         success: true,
         sessionState: this.sessionState
       };
 
     } catch (error) {
-      console.error('Error en Groq Chat AI:', error);
+      console.error('Error en IA Real:', error);
       
-      const response = this.getFallbackResponse(userMessage);
-      this.addToHistory('assistant', response);
+      const fallbackResponse = this.getBasicFallback(userMessage);
+      this.addToHistory('assistant', fallbackResponse);
       
       return {
-        content: response,
+        content: fallbackResponse,
         source: 'fallback',
         success: false,
         error: error.message
@@ -372,61 +232,188 @@ Por ejemplo: "Me llamo María" o simplemente "Carlos"`;
     }
   }
 
-  // Actualizar estado de sesión
-  updateSessionState(userMessage, aiResponse) {
-    const features = [];
-    const msg = userMessage.toLowerCase();
+  // ✅ ACTUALIZAR ESTADO INTELIGENTEMENTE
+  async updateStateFromAIResponse(userMessage, aiResponse) {
+    // Incrementar preguntas si estamos en brief
+    if (this.sessionState.conversationStage === 'brief') {
+      this.sessionState.questionCount++;
+    }
+
+    // ✅ EXTRAER NOMBRE SI NO LO TENEMOS (simple)
+    if (!this.sessionState.userName && this.sessionState.conversationStage === 'greeting') {
+      const nameMatch = userMessage.match(/(?:soy|me llamo|mi nombre es)\s+([a-záéíóúñ]+)/i);
+      if (nameMatch) {
+        this.sessionState.userName = nameMatch[1];
+        this.sessionState.conversationStage = 'brief';
+      }
+    }
+
+    // ✅ ACTUALIZAR RESUMEN DEL PROYECTO
+    if (this.sessionState.conversationStage === 'brief') {
+      // Agregar nueva información al resumen
+      this.sessionState.briefData.summary += ` ${userMessage}`;
+    }
+
+    // ✅ DETECTAR CUANDO DAR ESTIMADO Y PREPARAR FORMULARIO
+    const response = aiResponse.toLowerCase();
     
-    if (msg.includes('reservas') || msg.includes('booking')) features.push('reservas');
-    if (msg.includes('tienda') || msg.includes('e-commerce') || msg.includes('venta')) features.push('e-commerce');
-    if (msg.includes('multiidioma') || msg.includes('idiomas')) features.push('multiidioma');
-    if (msg.includes('blog')) features.push('blog');
+    if (this.sessionState.conversationStage === 'brief' && 
+        (response.includes('estimado') || response.includes('precio') || 
+         this.sessionState.questionCount >= this.sessionState.maxQuestions)) {
+      this.sessionState.conversationStage = 'estimate';
+      
+      // ✅ GENERAR ANÁLISIS PARA EL FORMULARIO
+      await this.generateProjectAnalysis();
+    }
     
-    this.sessionState.briefData.features = [...new Set([...this.sessionState.briefData.features, ...features])];
-    
-    if (msg.includes('restaurante') || msg.includes('comida')) {
-      this.sessionState.briefData.businessType = 'restaurante';
-    } else if (msg.includes('tienda') || msg.includes('venta')) {
-      this.sessionState.briefData.businessType = 'comercio';
-    } else if (msg.includes('empresa') || msg.includes('corporativ')) {
-      this.sessionState.briefData.businessType = 'corporativo';
+    // ✅ DETECTAR CUANDO ABRIR FORMULARIO
+    if (this.sessionState.conversationStage === 'estimate' && 
+        (response.includes('formulario') || response.includes('completar') || 
+         response.includes('datos') || response.includes('abrir'))) {
+      this.sessionState.conversationStage = 'pre_quote_ready';
+      this.sessionState.shouldOpenPreQuote = true;
+    }
+
+    // ✅ AUTO-AVANZAR SI YA USÓ TODAS LAS PREGUNTAS
+    if (this.sessionState.conversationStage === 'brief' && 
+        this.sessionState.questionCount >= this.sessionState.maxQuestions) {
+      this.sessionState.conversationStage = 'estimate';
     }
   }
 
-  // ✅ RESPUESTAS DE FALLBACK MEJORADAS (SIN REPETICIONES)
-  getFallbackResponse(userMessage) {
+  // ✅ ESTIMADOR INTELIGENTE BASADO EN CONVERSACIÓN
+  async generateIntelligentEstimate() {
+    const conversation = this.getConversationContext();
+    
+    // ✅ USAR IA PARA GENERAR ESTIMADO
+    try {
+      const estimatePrompt = `Como Pablo de EKLISTA, analiza esta conversación y da un estimado de precio realista:
+
+CONVERSACIÓN: ${conversation}
+
+PRECIOS DE REFERENCIA:
+- Diseño Gráfico: ${formatPrice(500)} - ${formatPrice(1500)}
+- WordPress básico: ${formatPrice(1200)} - ${formatPrice(3000)}
+- WordPress complejo: ${formatPrice(3000)} - ${formatPrice(6000)}
+- UX/UI: ${formatPrice(800)} - ${formatPrice(2500)}
+- Desarrollo Custom: ${formatPrice(4000)} - ${formatPrice(12000)}
+
+Da un rango realista y explica brevemente por qué, basado en lo que entendiste del proyecto.
+Formato: "Q[min] - Q[max]"`;
+
+      const estimateCompletion = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: estimatePrompt }],
+        model: "llama3-70b-8192",
+        temperature: 0.5,
+        max_tokens: 200
+      });
+
+      return estimateCompletion.choices[0]?.message?.content || this.getBasicEstimate();
+      
+    } catch (error) {
+      return this.getBasicEstimate();
+    }
+  }
+
+  // ✅ NUEVO: GENERAR ANÁLISIS COMPLETO PARA EL FORMULARIO
+  async generateProjectAnalysis() {
+    const conversation = this.getConversationContext();
+    
+    try {
+      const analysisPrompt = `Basado en esta conversación con ${this.sessionState.userName}, genera un análisis completo del proyecto:
+
+CONVERSACIÓN: ${conversation}
+
+Necesito que generes:
+1. Resumen del proyecto (1-2 oraciones)
+2. Tipo de proyecto detectado (ej: "Portfolio web profesional", "Sitio WordPress corporativo")
+3. Estimado de precio (rango en quetzales)
+4. Análisis detallado (qué funcionalidades necesita, para qué tipo de negocio, etc.)
+
+Responde en formato JSON:
+{
+  "summary": "resumen del proyecto",
+  "projectType": "tipo detectado",
+  "estimate": "Q1,500 - Q3,200",
+  "analysis": "análisis detallado"
+}`;
+
+      const analysisCompletion = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: analysisPrompt }],
+        model: "llama3-70b-8192",
+        temperature: 0.4,
+        max_tokens: 300
+      });
+
+      const analysisResponse = analysisCompletion.choices[0]?.message?.content;
+      
+      try {
+        const analysisData = JSON.parse(analysisResponse);
+        
+        this.sessionState.briefData.summary = analysisData.summary || 'Proyecto analizado en conversación';
+        this.sessionState.briefData.projectType = analysisData.projectType || 'Proyecto web';
+        this.sessionState.briefData.estimate = analysisData.estimate || 'Q1,200 - Q3,500';
+        this.sessionState.briefData.aiAnalysis = analysisData.analysis || 'Análisis basado en conversación con IA';
+        
+      } catch (parseError) {
+        // Fallback si no puede parsear JSON
+        this.setFallbackAnalysis();
+      }
+      
+    } catch (error) {
+      this.setFallbackAnalysis();
+    }
+  }
+
+  // ✅ ANÁLISIS FALLBACK
+  setFallbackAnalysis() {
+    const conversation = this.sessionState.briefData.summary;
+    
+    this.sessionState.briefData.summary = conversation || 'Proyecto discutido en conversación con IA';
+    this.sessionState.briefData.projectType = 'Proyecto web personalizado';
+    this.sessionState.briefData.estimate = 'Q1,500 - Q3,500';
+    this.sessionState.briefData.aiAnalysis = `Proyecto analizado automáticamente basado en conversación. Usuario: ${this.sessionState.userName}. Requerimientos discutidos en chat interactivo.`;
+  }
+
+  // ✅ FALLBACK BÁSICO MEJORADO
+  getBasicFallback(userMessage) {
     const { userName, conversationStage } = this.sessionState;
-    const namePrefix = userName && conversationStage !== 'greeting' ? `${userName}, ` : '';
     
-    if (conversationStage === 'briefing' || this.detectsPricingIntent(userMessage)) {
-      return `${namePrefix}para darte un precio preciso, necesito saber:
+    if (conversationStage === 'greeting' && userMessage === 'inicio') {
+      return `¡Hola! 👋 Soy Pablo de EKLISTA.
 
-¿Qué tipo de proyecto tienes en mente?
-• **Sitio web** (WordPress) - Desde ${formatPrice(1200)}
-• **Diseño gráfico** (logo, branding) - Desde ${formatPrice(500)}
-• **UX/UI** (interfaz) - Desde ${formatPrice(800)}
-• **Desarrollo custom** (aplicación) - Desde ${formatPrice(4000)}
-
-¿Para qué tipo de negocio es?`;
+Antes de empezar, ¿cómo te llamas? Y cuéntame un poco sobre tu proyecto o la idea que tienes en mente.`;
     }
 
-    if (conversationStage === 'helping') {
-      return `${namePrefix}te ayudo con:
+    if (conversationStage === 'brief' || conversationStage === 'greeting') {
+      const name = userName ? `${userName}, ` : '';
+      return `${name}cuéntame más sobre tu proyecto.
 
-🎨 **Diseño Gráfico** - Desde ${formatPrice(500)}
-💻 **Desarrollo Web** - Desde ${formatPrice(1200)}  
-🎯 **UX/UI Design** - Desde ${formatPrice(800)}
-⚡ **Desarrollo Custom** - Desde ${formatPrice(4000)}
+Trabajo con:
+• **Sitios web** - Desde ${formatPrice(1200)}
+• **Diseño gráfico** - Desde ${formatPrice(500)}
+• **Apps/sistemas** - Desde ${formatPrice(4000)}
 
-¿Cuál te interesa para tu proyecto?`;
+¿Qué tienes en mente?`;
     }
 
-    return `¡Hola! Soy Pablo de EKLISTA, diseñador y desarrollador web en Guatemala.
+    return `${userName ? userName + ', ' : ''}¿en qué puedo ayudarte?
 
-¿En qué puedo ayudarte hoy?`;
+Contacto directo: hello@eklista.com`;
   }
 
-  // ✅ MÉTODOS DE UTILIDAD MEJORADOS
+  getBasicEstimate() {
+    return `Basado en lo que me contaste, estimo entre ${formatPrice(1200)} - ${formatPrice(3500)}.
+
+**Importante:**
+• Estimado inicial (puede variar según detalles finales)
+• NO incluye hosting
+• Pablo revisará tu solicitud y se comunicará para dudas
+
+Te voy a abrir el formulario de precotización para que completes tus datos de contacto.`;
+  }
+
+  // ✅ MÉTODOS DE UTILIDAD
   isAvailable() {
     return this.isInitialized && this.groq !== null;
   }
@@ -435,26 +422,22 @@ Por ejemplo: "Me llamo María" o simplemente "Carlos"`;
     return this.sessionState;
   }
 
-  getConversationHistory() {
-    return this.conversationHistory;
-  }
-
   resetSession() {
     this.conversationHistory = [];
     this.sessionState = {
       userName: null,
-      hasAskedName: false,
       conversationStage: 'greeting',
       briefData: {
+        summary: '',
         projectType: null,
-        businessType: null,
-        features: [],
-        budget: null,
-        timeline: null,
-        needsHelp: false
+        estimate: null,
+        aiAnalysis: ''
       },
-      messageCount: 0,
-      lastResponse: null
+      contactMethod: null,
+      contactInfo: {},
+      questionCount: 0,
+      maxQuestions: 3,
+      shouldOpenPreQuote: false
     };
   }
 
@@ -464,8 +447,28 @@ Por ejemplo: "Me llamo María" o simplemente "Carlos"`;
       hasApiKey: !!import.meta.env.VITE_GROQ_API_KEY,
       sessionState: this.sessionState,
       conversationLength: this.conversationHistory.length,
-      currentStage: this.sessionState.conversationStage
+      currentStage: this.sessionState.conversationStage,
+      questionsUsed: `${this.sessionState.questionCount}/${this.sessionState.maxQuestions}`,
+      aiMode: 'real-intelligence',
+      shouldOpenPreQuote: this.sessionState.shouldOpenPreQuote
     };
+  }
+
+  // ✅ NUEVO: OBTENER DATOS PARA EL FORMULARIO
+  getPreQuoteData() {
+    return {
+      userName: this.sessionState.userName,
+      summary: this.sessionState.briefData.summary,
+      projectType: this.sessionState.briefData.projectType,
+      estimate: this.sessionState.briefData.estimate,
+      aiAnalysis: this.sessionState.briefData.aiAnalysis,
+      conversationHistory: this.conversationHistory
+    };
+  }
+
+  // ✅ NUEVO: RESET FLAG DEL FORMULARIO
+  resetPreQuoteFlag() {
+    this.sessionState.shouldOpenPreQuote = false;
   }
 }
 
