@@ -2,21 +2,18 @@ import React from 'react';
 import { 
   PaperAirplaneIcon, 
   SparklesIcon,
-  DocumentArrowDownIcon,
   UserIcon,
   ComputerDesktopIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ClockIcon,
-  Bars3Icon,
-  XMarkIcon
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useChat, type Message } from '../hooks/useChat';
 
 const ChatInterface: React.FC = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
   
   const {
     // Estados
@@ -30,20 +27,20 @@ const ChatInterface: React.FC = () => {
     sendMessage,
     setInput,
     clearConversation,
-    generateSummary,
-    executeQuickAction,
-    generatePDF,
-    
-    // Utilidades
-    quickActions,
     
     // Estados derivados
-    isLoading,
-    isGenerating,
-    canSend,
-    canGeneratePDF,
-    isGeneratingPDF
+    isLoading
   } = useChat();
+
+  // Cooldown effect
+  React.useEffect(() => {
+    if (cooldownSeconds > 0) {
+      const timer = setTimeout(() => {
+        setCooldownSeconds(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownSeconds]);
 
   // Auto-resize del textarea
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -53,10 +50,17 @@ const ChatInterface: React.FC = () => {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && cooldownSeconds === 0) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading || cooldownSeconds > 0) return;
+    
+    await sendMessage();
+    setCooldownSeconds(3); // 3 segundos de cooldown
   };
 
   // Componente para el estado del sistema
@@ -64,14 +68,14 @@ const ChatInterface: React.FC = () => {
     if (isGroqConfigured) return null;
 
     return (
-      <div className="mx-4 mb-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 backdrop-blur-sm border border-amber-500/20 rounded-2xl p-4 shadow-lg">
+      <div className="mx-4 mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
-            <ExclamationTriangleIcon className="w-5 h-5 text-amber-400 mt-0.5" />
+            <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 mt-0.5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-amber-300 mb-1">Modo Demo</h4>
-            <p className="text-sm text-amber-200/80 leading-relaxed">
+            <h4 className="text-sm font-semibold text-amber-800 mb-1">Modo Demo</h4>
+            <p className="text-sm text-amber-700 leading-relaxed">
               El chat funciona con respuestas predefinidas. 
               Configura tu API key de Groq para IA completa.
             </p>
@@ -83,32 +87,42 @@ const ChatInterface: React.FC = () => {
 
   // Componente del indicador de estado
   const StatusIndicator: React.FC = () => {
-    if (chatStatus === 'idle') return null;
+    if (chatStatus === 'idle' && cooldownSeconds === 0) return null;
 
-    const statusConfig = {
+    if (cooldownSeconds > 0) {
+      return (
+        <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-gray-100 border border-gray-300">
+          <ClockIcon className="w-3.5 h-3.5 text-gray-600 animate-pulse" />
+          <span className="text-xs font-medium text-gray-600">
+            Espera {cooldownSeconds}s...
+          </span>
+        </div>
+      );
+    }
+
+    const statusConfig: Record<string, {
+      icon: React.ComponentType<any>;
+      text: string;
+      color: string;
+      bgColor: string;
+    }> = {
       typing: {
         icon: ClockIcon,
-        text: 'Procesando...',
-        color: 'text-blue-400',
-        bgColor: 'bg-blue-500/10'
-      },
-      generating: {
-        icon: DocumentArrowDownIcon,
-        text: 'Generando documento...',
-        color: 'text-purple-400',
-        bgColor: 'bg-purple-500/10'
+        text: 'Escribiendo...',
+        color: 'text-gray-600',
+        bgColor: 'bg-gray-100'
       },
       error: {
         icon: ExclamationTriangleIcon,
         text: 'Error en conexión',
-        color: 'text-red-400',
-        bgColor: 'bg-red-500/10'
+        color: 'text-red-600',
+        bgColor: 'bg-red-50'
       },
       completed: {
         icon: CheckCircleIcon,
         text: 'Completado',
-        color: 'text-emerald-400',
-        bgColor: 'bg-emerald-500/10'
+        color: 'text-green-600',
+        bgColor: 'bg-green-50'
       }
     };
 
@@ -118,26 +132,60 @@ const ChatInterface: React.FC = () => {
     const Icon = config.icon;
 
     return (
-      <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${config.bgColor} border border-white/10`}>
+      <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${config.bgColor} border border-gray-200`}>
         <Icon className={`w-3.5 h-3.5 ${config.color} animate-pulse`} />
         <span className={`text-xs font-medium ${config.color}`}>{config.text}</span>
       </div>
     );
   };
 
-  // Componente para las burbujas de mensaje
+  // Componente para las burbujas de mensaje con typing effect
   const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
+    const [displayedContent, setDisplayedContent] = React.useState('');
+    const [isTypingComplete, setIsTypingComplete] = React.useState(false);
+    const [hasStartedTyping, setHasStartedTyping] = React.useState(false);
     const isUser = message.sender === 'user';
+    
+    // Typing effect para mensajes del asistente
+    React.useEffect(() => {
+      if (isUser || message.isTyping || hasStartedTyping) {
+        if (!hasStartedTyping) {
+          setDisplayedContent(message.content);
+          setIsTypingComplete(true);
+        }
+        return;
+      }
+
+      // Solo aplicar typing effect UNA VEZ por mensaje
+      if (message.content && message.content.length > 0) {
+        setHasStartedTyping(true);
+        let index = 0;
+        setDisplayedContent('');
+        setIsTypingComplete(false);
+
+        const typingInterval = setInterval(() => {
+          if (index < message.content.length) {
+            setDisplayedContent(message.content.slice(0, index + 1));
+            index++;
+          } else {
+            setIsTypingComplete(true);
+            clearInterval(typingInterval);
+          }
+        }, 12); // 12ms entre caracteres
+
+        return () => clearInterval(typingInterval);
+      }
+    }, [message.id]); // Solo depende del ID del mensaje
     
     if (message.isTyping) {
       return (
         <div className="flex items-start space-x-3 mb-6 animate-in slide-in-from-bottom-2 duration-300">
           <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
               <SparklesIcon className="w-4 h-4 text-white" />
             </div>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl px-4 py-3 max-w-xs sm:max-w-md border border-white/10 shadow-xl">
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 max-w-xs sm:max-w-md border border-gray-200">
             <div className="flex space-x-1">
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.1s]"></div>
@@ -153,12 +201,12 @@ const ChatInterface: React.FC = () => {
         isUser ? 'flex-row-reverse space-x-reverse' : ''
       }`}>
         <div className="flex-shrink-0">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
             isUser 
-              ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
+              ? 'bg-gray-600' 
               : message.error 
-              ? 'bg-gradient-to-br from-red-500 to-pink-500' 
-              : 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500'
+              ? 'bg-red-500' 
+              : 'bg-gray-700'
           }`}>
             {isUser ? (
               <UserIcon className="w-4 h-4 text-white" />
@@ -170,41 +218,44 @@ const ChatInterface: React.FC = () => {
           </div>
         </div>
         
-        <div className={`rounded-2xl px-4 py-3 max-w-xs sm:max-w-md lg:max-w-lg shadow-xl ${
+        <div className={`rounded-2xl px-4 py-3 max-w-xs sm:max-w-md lg:max-w-lg border ${
           isUser 
-            ? 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white ml-auto' 
+            ? 'bg-gray-700 text-white ml-auto border-gray-700' 
             : message.error
-            ? 'bg-gradient-to-br from-red-500/20 to-pink-500/20 backdrop-blur-sm border border-red-500/30 text-red-100'
-            : 'bg-white/5 backdrop-blur-sm text-gray-100 border border-white/10'
+            ? 'bg-red-50 border-red-200 text-red-800'
+            : 'bg-white text-gray-900 border-gray-200 shadow-sm'
         }`}>
           {isUser ? (
             <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
           ) : (
-            <div className="prose prose-sm max-w-none prose-invert">
+            <div className="prose prose-sm max-w-none">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  p: ({ children }) => <p className="mb-3 last:mb-0 text-gray-100 leading-relaxed">{children}</p>,
-                  strong: ({ children }) => <strong className="font-semibold text-blue-300">{children}</strong>,
+                  p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold text-gray-800">{children}</strong>,
                   ul: ({ children }) => <ul className="list-disc list-inside my-3 space-y-1.5">{children}</ul>,
-                  li: ({ children }) => <li className="text-sm text-gray-200 leading-relaxed">{children}</li>,
-                  h1: ({ children }) => <h1 className="text-lg font-bold text-white mb-2">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-base font-semibold text-white mb-2">{children}</h2>,
+                  li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base font-semibold mb-2">{children}</h2>,
                 }}
               >
-                {message.content}
+                {displayedContent}
               </ReactMarkdown>
+              {!isTypingComplete && !isUser && (
+                <span className="inline-block w-0.5 h-4 bg-gray-400 animate-pulse ml-1" />
+              )}
             </div>
           )}
           
           <div className={`text-xs mt-2 flex justify-between items-center ${
-            isUser ? 'text-blue-100' : 'text-gray-400'
+            isUser ? 'text-gray-300' : 'text-gray-500'
           }`}>
             <span>
               {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
             {message.error && (
-              <span className="text-red-300 text-xs font-medium">Error</span>
+              <span className="text-red-500 text-xs font-medium">Error</span>
             )}
           </div>
         </div>
@@ -212,87 +263,36 @@ const ChatInterface: React.FC = () => {
     );
   };
 
-  // Componente de controles del header (para mobile)
-  const HeaderControls: React.FC = () => (
-    <div className="flex items-center space-x-2">
-      {/* Botón de PDF - Principal */}
-      {canGeneratePDF && (
-        <button
-          onClick={generatePDF}
-          disabled={isLoading || isGeneratingPDF}
-          className="group bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 py-2 sm:px-4 rounded-xl hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 text-xs sm:text-sm flex items-center space-x-2 shadow-lg hover:shadow-emerald-500/25 hover:scale-105"
-        >
-          <DocumentArrowDownIcon className="w-4 h-4" />
-          <span className="hidden sm:inline">{isGeneratingPDF ? 'Generando...' : 'PDF'}</span>
-        </button>
-      )}
-      
-      {/* Botón de resumen */}
-      {messages.length > 4 && (
-        <button
-          onClick={async () => {
-            const summary = await generateSummary();
-            console.log('Resumen generado:', summary);
-          }}
-          disabled={isLoading || isGenerating}
-          className="group bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-2 sm:px-4 rounded-xl hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 text-xs sm:text-sm shadow-lg hover:shadow-purple-500/25 hover:scale-105"
-        >
-          <span className="hidden sm:inline">Resumen</span>
-          <span className="sm:hidden">📝</span>
-        </button>
-      )}
-      
-      <button
-        onClick={clearConversation}
-        disabled={isLoading}
-        className="group bg-white/10 backdrop-blur-sm text-white px-3 py-2 sm:px-4 rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 text-xs sm:text-sm border border-white/20 hover:scale-105"
-      >
-        <span className="hidden sm:inline">Nueva</span>
-        <span className="sm:hidden">🗑️</span>
-      </button>
-    </div>
-  );
-
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Chat Principal */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="bg-white/5 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-4 shadow-2xl">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0 flex-1">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gray-700 rounded-xl flex items-center justify-center">
                 <ComputerDesktopIcon className="w-6 h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold text-white truncate">MediaLab Assistant</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Asistente MediaLab</h1>
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                  <p className="text-xs sm:text-sm text-gray-300 truncate">Asistente para solicitudes</p>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">Asistente para solicitudes</p>
                   <StatusIndicator />
                 </div>
               </div>
             </div>
             
-            {/* Controles del header - Desktop */}
-            <div className="hidden md:flex">
-              <HeaderControls />
-            </div>
-            
-            {/* Botón menú móvil */}
+            {/* Solo botón Nueva conversación */}
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-white hover:bg-white/10 rounded-xl transition-colors"
+              onClick={clearConversation}
+              disabled={isLoading}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-xs sm:text-sm border border-gray-300 hover:border-gray-400"
             >
-              {isMobileMenuOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
+              <span className="hidden sm:inline">Nueva conversación</span>
+              <span className="sm:hidden">Nueva</span>
             </button>
           </div>
-          
-          {/* Menú móvil */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden mt-4 pt-4 border-t border-white/10 animate-in slide-in-from-top-2 duration-200">
-              <HeaderControls />
-            </div>
-          )}
         </div>
 
         {/* Messages Area */}
@@ -310,22 +310,8 @@ const ChatInterface: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className="bg-white/5 backdrop-blur-xl border-t border-white/10 px-4 sm:px-6 py-4 shadow-2xl">
+        <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-4">
           <div className="max-w-4xl mx-auto">
-            {/* Quick Actions */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {quickActions.map((action) => (
-                <button 
-                  key={action.id}
-                  onClick={() => executeQuickAction(action.id)}
-                  disabled={isLoading}
-                  className="group text-xs bg-white/10 hover:bg-white/20 disabled:opacity-50 px-3 py-1.5 rounded-full transition-all duration-200 text-gray-300 border border-white/20 backdrop-blur-sm hover:scale-105 hover:text-white"
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-            
             {/* Input principal */}
             <div className="flex items-end space-x-3">
               <div className="flex-1 relative">
@@ -333,21 +319,31 @@ const ChatInterface: React.FC = () => {
                   value={inputValue}
                   onChange={handleTextareaChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="Escribe tu mensaje..."
-                  disabled={isLoading}
-                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl resize-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder-gray-400 transition-all duration-200 text-sm sm:text-base leading-relaxed"
-                  rows={1}
-                  style={{ maxHeight: '120px' }}
+                  placeholder={
+                    cooldownSeconds > 0 
+                      ? `Espera ${cooldownSeconds} segundos...` 
+                      : "Escribe tu mensaje..."
+                  }
+                  disabled={isLoading || cooldownSeconds > 0}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500 transition-all duration-200 text-sm sm:text-base leading-relaxed"
+                  rows={3}
+                  style={{ minHeight: '80px', maxHeight: '120px' }}
                 />
               </div>
               <button
-                onClick={() => sendMessage()}
-                disabled={!canSend}
-                className="group bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-3 rounded-2xl hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-blue-500/25 hover:scale-105 flex-shrink-0"
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || isLoading || cooldownSeconds > 0}
+                className="bg-gray-700 hover:bg-gray-800 text-white p-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0 shadow-sm hover:shadow-md"
               >
-                <PaperAirplaneIcon className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                <PaperAirplaneIcon className="w-5 h-5" />
               </button>
             </div>
+            
+            {cooldownSeconds > 0 && (
+              <div className="mt-2 text-xs text-gray-500 text-center">
+                Por favor espera {cooldownSeconds} segundos antes del próximo mensaje
+              </div>
+            )}
           </div>
         </div>
       </div>
